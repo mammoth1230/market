@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Market</title>
+</head>
+<body style="background:#111; color:#eee; font-family:sans-serif; padding:24px;">
+  <h1>📊 My Market Calendar</h1>
+  <p>안녕하세요! 제 첫 번째 웹사이트입니다.</p>
+  <p id="time"></p>
+  <script>
+    document.getElementById('time').textContent =
+      '지금 시각: ' + new Date().toLocaleString('ko-KR');
+  </script>
+</body>
+</html>
