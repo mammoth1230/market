@@ -1,0 +1,27 @@
+# GitHub Actions 작업 설명서: "언제, 어떤 컴퓨터에서, 무엇을 할지"
+name: 시장 데이터 수집
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'   # 30분마다 (시간은 UTC 기준, 실제로는 몇 분씩 밀릴 수 있음)
+  workflow_dispatch:          # Actions 화면에서 'Run workflow' 버튼으로 바로 실행 가능
+
+permissions:
+  contents: write             # 수집한 data.json을 저장소에 저장(커밋)할 권한
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest    # GitHub이 빌려주는 리눅스 컴퓨터
+    steps:
+      - uses: actions/checkout@v4       # 1. 내 저장소 파일을 컴퓨터로 내려받기
+      - uses: actions/setup-node@v4     # 2. Node.js 설치
+        with:
+          node-version: 20
+      - run: node scripts/collect.mjs   # 3. 수집 스크립트 실행
+      - name: 바뀐 데이터 저장(커밋)    # 4. data.json이 바뀌었으면 저장소에 저장
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/latest.json
+          git diff --cached --quiet || git commit -m "데이터 자동 수집"
+          git push
