@@ -44,6 +44,10 @@
     <h1>📊 My Market Calendar</h1>
     <div class="sub" id="time"></div>
 
+    <h2>주요 지수 · 실시간 환율</h2>
+    <div class="grid" id="quotes">불러오는 중…</div>
+    <div class="note" id="quotes-note">출처: Yahoo Finance · GitHub Actions가 30분마다 수집</div>
+
     <h2>암호화폐</h2>
     <div class="grid" id="coins">불러오는 중…</div>
     <div class="note">출처: CoinGecko · 실시간 · 24시간 변동률</div>
@@ -115,9 +119,27 @@
       }
     }
 
+    // ── 3. 지수: GitHub Actions가 모아 둔 내 저장소의 data/latest.json 읽기 ──
+    async function loadQuotes() {
+      const box = document.getElementById('quotes');
+      try {
+        // ?t=... 는 브라우저가 예전 파일을 재사용(캐시)하지 않게 하는 꼬리표
+        const data = await (await fetch('data/latest.json?t=' + Date.now())).json();
+        box.innerHTML = data.quotes.map(q =>
+          card(q.name, q.price.toLocaleString('ko-KR', { maximumFractionDigits: 2 }), q.changePct)
+        ).join('');
+        document.getElementById('quotes-note').textContent =
+          '출처: Yahoo Finance · GitHub Actions 수집 · 마지막 수집 '
+          + new Date(data.updated).toLocaleString('ko-KR');
+      } catch (e) {
+        box.textContent = '지수 데이터를 불러오지 못했어요.';
+      }
+    }
+
     function loadAll() {
       document.getElementById('time').textContent =
         '업데이트: ' + new Date().toLocaleString('ko-KR');
+      loadQuotes();
       loadCoins();
       loadFx();
     }
