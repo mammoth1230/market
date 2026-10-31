@@ -4,14 +4,126 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>My Market</title>
+  <style>
+    /* ── 화면 꾸미기(CSS) ── */
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: #0f1115;
+      color: #e8e8e8;
+      font-family: -apple-system, "Malgun Gothic", sans-serif;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { color: #f0b429; margin: 0 0 4px; }
+    .sub { color: #888; font-size: 14px; margin-bottom: 24px; }
+    h2 { font-size: 16px; color: #aaa; margin: 28px 0 10px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    .card {
+      background: #181b22;
+      border: 1px solid #262a33;
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .name { color: #aaa; font-size: 14px; }
+    .price { font-size: 24px; font-weight: bold; margin: 6px 0; }
+    .up { color: #ff5a5a; }    /* 한국식: 상승 빨강 */
+    .down { color: #4d8dff; }  /* 한국식: 하락 파랑 */
+    .note { color: #666; font-size: 12px; margin-top: 8px; }
+    button {
+      margin-top: 24px; padding: 8px 14px; border-radius: 8px;
+      border: 1px solid #333; background: #222; color: #ddd; cursor: pointer;
+    }
+  </style>
 </head>
-<body style="background:#111; color:#eee; font-family:sans-serif; padding:24px;">
-  <h1>📊 My Market Calendar</h1>
-  <p>안녕하세요! 제 첫 번째 웹사이트입니다.</p>
-  <p id="time"></p>
+<body>
+  <div class="wrap">
+    <h1>📊 My Market Calendar</h1>
+    <div class="sub" id="time"></div>
+
+    <h2>암호화폐</h2>
+    <div class="grid" id="coins">불러오는 중…</div>
+    <div class="note">출처: CoinGecko · 실시간 · 24시간 변동률</div>
+
+    <h2>환율</h2>
+    <div class="grid" id="fx">불러오는 중…</div>
+    <div class="note">출처: Frankfurter(유럽중앙은행 기준) · 하루 1번 갱신 · 전일 대비</div>
+
+    <button onclick="loadAll()">🔄 새로고침</button>
+  </div>
+
   <script>
-    document.getElementById('time').textContent =
-      '지금 시각: ' + new Date().toLocaleString('ko-KR');
+    // ── 숫자를 보기 좋게 바꾸는 작은 도구들 ──
+    function won(n, digits = 0) {
+      return n.toLocaleString('ko-KR', { maximumFractionDigits: digits }) + '원';
+    }
+    function change(pct) {
+      const cls = pct >= 0 ? 'up' : 'down';
+      const arrow = pct >= 0 ? '▲' : '▼';
+      return `<span class="${cls}">${arrow} ${Math.abs(pct).toFixed(2)}%</span>`;
+    }
+    function card(name, price, pct) {
+      return `<div class="card">
+        <div class="name">${name}</div>
+        <div class="price">${price}</div>
+        ${change(pct)}
+      </div>`;
+    }
+
+    // ── 1. 코인 시세: CoinGecko API에서 받아오기 ──
+    async function loadCoins() {
+      const box = document.getElementById('coins');
+      try {
+        const url = 'https://api.coingecko.com/api/v3/simple/price'
+          + '?ids=bitcoin,ethereum&vs_currencies=krw&include_24hr_change=true';
+        const data = await (await fetch(url)).json();
+        box.innerHTML =
+          card('비트코인 (BTC)', won(data.bitcoin.krw), data.bitcoin.krw_24h_change) +
+          card('이더리움 (ETH)', won(data.ethereum.krw), data.ethereum.krw_24h_change);
+      } catch (e) {
+        box.textContent = '코인 시세를 불러오지 못했어요.';
+      }
+    }
+
+    // ── 2. 환율: 최근 열흘치를 받아 마지막 두 날짜를 비교 ──
+    async function loadFx() {
+      const box = document.getElementById('fx');
+      try {
+        const start = new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+        const url = `https://api.frankfurter.dev/v1/${start}..?base=USD&symbols=KRW,JPY,EUR`;
+        const data = await (await fetch(url)).json();
+        const days = Object.keys(data.rates).sort();
+        const today = data.rates[days[days.length - 1]];
+        const prev = data.rates[days[days.length - 2]];
+
+        // 1달러, 100엔, 1유로가 각각 몇 원인지 계산
+        const rows = [
+          ['미국 달러 (1 USD)', t => t.KRW],
+          ['일본 엔 (100 JPY)', t => t.KRW / t.JPY * 100],
+          ['유로 (1 EUR)', t => t.KRW / t.EUR],
+        ];
+        box.innerHTML = rows.map(([name, f]) =>
+          card(name, won(f(today), 2), (f(today) / f(prev) - 1) * 100)
+        ).join('');
+        document.querySelector('#fx + .note').textContent =
+          `출처: Frankfurter(유럽중앙은행 기준) · ${days[days.length - 1]} 기준 · 전일 대비`;
+      } catch (e) {
+        box.textContent = '환율을 불러오지 못했어요.';
+      }
+    }
+
+    function loadAll() {
+      document.getElementById('time').textContent =
+        '업데이트: ' + new Date().toLocaleString('ko-KR');
+      loadCoins();
+      loadFx();
+    }
+
+    loadAll();
+    setInterval(loadCoins, 60 * 1000); // 코인은 1분마다 자동 갱신
   </script>
 </body>
 </html>
