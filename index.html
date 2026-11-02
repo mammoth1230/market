@@ -82,6 +82,13 @@
     </div>
     <div class="note" id="chart-note">출처: data/history.json (날짜별 종가 기록)</div>
 
+    <h2>신용융자잔고 · 투자자예탁금 (조원)</h2>
+    <div class="grid" id="credit">불러오는 중…</div>
+    <div class="card" style="margin-top: 12px;">
+      <div class="chart-box"><canvas id="credit-chart"></canvas></div>
+    </div>
+    <div class="note" id="credit-note">출처: 금융투자협회 FreeSIS · 1~2영업일 늦게 발표</div>
+
     <h2>암호화폐</h2>
     <div class="grid" id="coins">불러오는 중…</div>
     <div class="note">출처: CoinGecko · 실시간 · 24시간 변동률</div>
@@ -269,12 +276,59 @@
       }
     }
 
+    // ── 6. 신용잔고·예탁금: data/credit.json 읽기 (rows = [날짜, 코스피 신용, 코스닥 신용, 예탁금]) ──
+    let creditChart;
+    async function loadCredit() {
+      const box = document.getElementById('credit');
+      try {
+        const { rows } = await (await fetch('data/credit.json?t=' + Date.now())).json();
+        const last = rows[rows.length - 1];
+        const monthAgo = rows[Math.max(0, rows.length - 22)];   // 약 1개월(22영업일) 전
+        const names = ['코스피 신용', '코스닥 신용', '투자자예탁금'];
+        box.innerHTML = names.map((name, i) => {
+          const diff = last[i + 1] - monthAgo[i + 1];
+          const cls = diff >= 0 ? 'up' : 'down';
+          return `<div class="card"><div class="name">${name}</div>
+            <div class="price">${last[i + 1].toFixed(1)}조</div>
+            <span class="${cls}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(1)}조</span>
+            <span class="note"> 1개월 전 대비</span></div>`;
+        }).join('');
+
+        if (creditChart) creditChart.destroy();
+        const colors = ['#f0b429', '#b48cff', '#4dd4ac'];
+        creditChart = new Chart(document.getElementById('credit-chart'), {
+          type: 'line',
+          data: {
+            labels: rows.map(r => r[0]),
+            datasets: names.map((name, i) => ({
+              label: name, data: rows.map(r => r[i + 1]),
+              borderColor: colors[i], borderWidth: 2, pointRadius: 0,
+            })),
+          },
+          options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: '#aaa', boxWidth: 12 } } },
+            interaction: { mode: 'index', intersect: false },
+            scales: {
+              x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
+              y: { ticks: { color: '#777' }, grid: { color: '#222' } },
+            },
+          },
+        });
+        document.getElementById('credit-note').textContent =
+          `출처: 금융투자협회 FreeSIS · ${last[0]} 기준 (1~2영업일 늦게 발표)`;
+      } catch (e) {
+        box.textContent = '신용잔고 데이터를 불러오지 못했어요.';
+      }
+    }
+
     function loadAll() {
       document.getElementById('time').textContent =
         '업데이트: ' + new Date().toLocaleString('ko-KR');
       loadEvents();
       loadQuotes();
       loadHistory();
+      loadCredit();
       loadCoins();
       loadFx();
     }
