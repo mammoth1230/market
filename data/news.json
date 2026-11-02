@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-02T09:27:21.842Z",
+ "updated": "2026-11-02T09:39:04.408Z",
  "events": {
   "미국 중간선거 (상·하원)": [
    {
@@ -102,10 +102,10 @@
  "wti": [
   {
    "tag": "현황",
-   "title": "WTI 선물, 3% 넘게 하락…\"트럼프, 외교적 해결 원해\"(상보)",
-   "source": "연합인포맥스",
-   "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBKZ1dUbW1Bb2RUOG9zQWNTUXFhNzlfRFppQU9IX3BYdXlxU3puNWJvUWFGcElsM0xFaU0yVk5teVRJYVlXaXNEUkx5WVF4bjVOQ1B0bVZMWXhOQTdzMUp4eFIwRktEeTFJV2FXSEVxeUc?oc=5",
-   "date": "2026-11-02T05:56:33.000Z"
+   "title": "원달러 환율 1330원대 상승…국제유가는 하락",
+   "source": "중기이코노미",
+   "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE5kYkFRLU0xSzk5RVppTnNnaVIxNGVlQmZHOEc5d0lKb0RJaWJtT2F3ZDBSdTN2SVlJRWZQMUVQcnRmU2hWaWRuWGVHLUZFbGV2bGpFWi00RjRfQ3UyLTRaRk9pNzhpa2hOZFE?oc=5",
+   "date": "2026-11-02T01:36:18.000Z"
   },
   {
    "tag": "중동",
@@ -118,10 +118,10 @@
  "brent": [
   {
    "tag": "현황",
-   "title": "\"유가, '공급' 말고 '물류' 문제…\"브렌트유, 내년말 85달러\" |",
+   "title": "\"유가, '공급' 말고 '물류' 문제…\"브렌트유, 내년말 85달러\"",
    "source": "연합인포맥스",
-   "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTE9LVFZTTVk2d3haSHlDendtM3ZjUmxaSHdHMGRzZ1VHTVB1VXFOR3lGT2l4S18xSW9pTVUySThfOUNUYW1aeDZCN2RxY0hnN0hPUWpwQVFkLUk1VFQwazV4d0hybzl5UVZwMXlfa1ItUWNJOGxD?oc=5",
-   "date": "2026-11-02T06:28:11.000Z"
+   "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBJM2hHdUY0YTFLaWJJbGhkYUVJa0RsbTJfODZWRDRBQ054dDZIZERKdDZNbU5jeUprYzc0S3JQWlZGbWxtWkFGRUtxdW1FQ19UMV9IYlVYNHBDS09PTXAwdmMzYThqT29vWXlaNVlkRWU?oc=5",
+   "date": "2026-11-02T06:23:54.000Z"
   },
   {
    "tag": "중동",
@@ -157,19 +157,19 @@
   },
   {
    "tag": "전망",
-   "title": "코인 투자자 68.5% \"현행대로 내년 과세 무리\"… 43.6%는 '추가 유예' 전망",
-   "source": "더스탁(The Stock)",
-   "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE5icktoSTdrdDVhZ0ZnV3NBWjBYMGlqQ3IxaGFxRzR4M1Fscm5YZDYxSDVDUUlPRmRUUzFWQWtlNUZrZGh5YzViZEpqd3pHaWRfd0g0cFY2a1Z2N2xDb3RoTU9hSlVkSnBHRmc?oc=5",
-   "date": "2026-11-02T05:43:45.000Z"
+   "title": "美 비트코인 현물 ETF, 지난주 2억300만달러 순유출…이더리움도 자금 이탈",
+   "source": "블루밍비트",
+   "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE5IajRKRnViX0N0aG42UEJsd0E1Sk15Y2Roa0pTS01WcEd2Q1NBWWNLbDBPUnQwQWtjMTl5VEdpdkhETnJJNGY2bnpfbTlZeU1p?oc=5",
+   "date": "2026-11-02T04:37:36.000Z"
   }
  ],
  "krw": [
   {
    "tag": "현황",
-   "title": "[외환-마감] 코스피 반등·外人 '사자'로 상승…9.50원↑",
-   "source": "KB Think",
-   "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE1hSlpXSmZubWZEN1JKS19Da1ljTjlWMUh6a0dNdTlhU3VLN244SzZZQ2RFVm5rQnZyb25aLVZCWHJsV0dwU0tSSTJUZTY5QXA3ZVIzSXBwQzVrb0NwSG1Ya2JBMzMwWkpiOHRjZ0FkVG5jUQ?oc=5",
-   "date": "2026-11-02T07:14:55.000Z"
+   "title": "원·달러 환율, 9.5원 오른 1343.8원 마감",
+   "source": "뉴시스",
+   "link": "https://news.google.com/rss/articles/CBMieEFVX3lxTE5NUmQ2cTlBMm1tZnJtYVpIZXdSRVRWN3d4UWhUTFV5cjhFNWtadmtTMGdwdWxla3kxRDlBdW80WGRjWDNQZVFBQ2JfMDlpRTZ1TVZQeV84dzFpaWIyRzVPcG9US3pvZG5oblZ3Q3h3X2pJay16NktQddIBeEFVX3lxTE5NUmQ2cTlBMm1tZnJtYVpIZXdSRVRWN3d4UWhUTFV5cjhFNWtadmtTMGdwdWxla3kxRDlBdW80WGRjWDNQZVFBQ2JfMDlpRTZ1TVZQeV84dzFpaWIyRzVPcG9US3pvZG5oblZ3Q3h3X2pJay16NktQdQ?oc=5",
+   "date": "2026-11-02T06:56:42.000Z"
   },
   {
    "tag": "현황",
@@ -216,6 +216,66 @@
    "source": "연합인포맥스",
    "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTE16Z0IzNnc2R1VUYlFkbkZqZHB6eE5zQjNBb0l6RmI2RGFsMnB5V1kzamFFWVRvcjJpTXBlbXpxNmVSUDNudC1LeGhxVS1nMTZ2c3dvU0h0TUE5LWpsZVI4d0ZhWF8zSWJfT2QtOFRLSm8?oc=5",
    "date": "2026-11-02T07:08:53.000Z"
+  }
+ ],
+ "rates": [
+  {
+   "tag": "한국",
+   "title": "인상 사이클인데 국채금리 너무 내렸나…\"주가조정 과잉반영\"",
+   "source": "연합뉴스",
+   "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE83VWpPWHp3cGZfM3VnbE1PSWZSNVpVcVBreUgzQ1NUaDVwUU5CMXE3MDRwQUVkV1d3RjZ1YV9oSnR3QmZicFhGUEphcjFNYWl2Vm9TU0U0dmlWbXNaanpha9IBYEFVX3lxTE83VWpPWHp3cGZfM3VnbE1PSWZSNVpVcVBreUgzQ1NUaDVwUU5CMXE3MDRwQUVkV1d3RjZ1YV9oSnR3QmZicFhGUEphcjFNYWl2Vm9TU0U0dmlWbXNaanphaw?oc=5",
+   "date": "2026-11-02T01:31:41.000Z"
+  },
+  {
+   "tag": "미국",
+   "title": "\"워시 연준 의장의 12월 금리 인상 의지 의심스러워\"",
+   "source": "연합인포맥스",
+   "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBWMHM2YUNVRFRnU2VMZWR0TWNvLVRJejlfU1M0VnVDdWcyM05yR0IzaFR6S0Q3WkRMS3JJeVpPSDFSQUVUY3BLMm1tQnR6RjZXZ2wyQzdaZW1QRTBnbHN1bTg3bWFvVHV1eGd5X0tpeWs?oc=5",
+   "date": "2026-11-02T03:31:29.000Z"
+  },
+  {
+   "tag": "유럽",
+   "title": "주요 중앙은행들의 금리 인상 행보는 아직 끝나지 않았다.",
+   "source": "Vietnam.vn",
+   "link": "https://news.google.com/rss/articles/CBMihgFBVV95cUxNYTBLejRvblVMU2RTaW9WQ3dfTEFuUVo2THZTclBKTEtLRnh6R28wWXhKUnVfdXNEQll2bWNKNzk3VGlhZHZKZnVMVFRVQl9NNXVGY3dERWxMakpPSUZ0N2l2T1phSVM3SGlGM3pwOURzU2lHdnBDSHFWc3JhMmYtOHByV2ZpQQ?oc=5",
+   "date": "2026-11-02T07:31:07.000Z"
+  },
+  {
+   "tag": "일본",
+   "title": "\"일본은행, 연말 추가 금리인상 전망…엔화 강세는 제한적\"",
+   "source": "뉴스투데이",
+   "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9vWkZpa0hmNi1XZ1RFQnpYcTZYU29fSXZ0RUxDNEVZX1JmZldpa3h4eE1DSXdwXzdHUE9ZVjJiOEpmTjh6VFAwWTVyZDRMcEFGRWZiM3JnQ1F6cnBCWUE?oc=5",
+   "date": "2026-11-02T00:41:00.000Z"
+  },
+  {
+   "tag": "영국",
+   "title": "영란은행, 이번 주 금리 인상 예상…추가 인상 가능성은?",
+   "source": "Investing.com 한국어",
+   "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE1pRW42OVYxU0MxTWpnRXAwaDFyWG13YzdscnlhRkxqSWRDd0VFLVd6WEJ2Vmt2MDlVWGlGTFlxclRRbkZEa3Z6bUZZOFF5c1V2am5ORWdLVFJST3B3bFVKR3JwYjl3YkJHWXc?oc=5",
+   "date": "2026-11-02T08:51:00.000Z"
+  },
+  {
+   "tag": "호주",
+   "title": "\"정부 지출 안 줄이면 호주 기준금리 6.5% 간다\" |",
+   "source": "연합인포맥스",
+   "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTE1ZbExCZTl4NFZJbnlHRU8xRzJHWTdsNHFrMklTYzVDS0J3NHZVTE13YnVFalZGTG9CWGZFb1VIcEEyMTlBMEs3REdGcEdjVUk2bzA2LVk1OVNXOWdUa1R2bHZOOWt0eC1CWGxreDVKZVNjWTBo?oc=5",
+   "date": "2026-11-02T06:58:55.000Z"
+  },
+  {
+   "tag": "캐나다",
+   "title": "캐나다 | 캐나다 기준금리 2.5%로 인상, 3년 만에 첫 긴축",
+   "source": "밴쿠버 중앙일보",
+   "link": "https://news.google.com/rss/articles/CBMid0FVX3lxTFBEMnAxRWtjS2hqa3owbnBzREFndmp5VTY4NFlMeUgtaDI0QXFJd2xsUzI5ZXR3WFAwWFRMMGxtZkV0SF9PT0ptMnY2SlI2NnNGclpLN2NQQWdzd1dsNXA4bkV2TzBMbHF1RE1mY2p4c01IZGMtQWo0?oc=5",
+   "date": "2026-11-02T01:16:35.000Z"
+  }
+ ],
+ "fng": [
+  {
+   "tag": "전망",
+   "title": "美·이란 외교적 기대로 코스피 2% 넘게 반등…기관 1조 순매수 |",
+   "source": "연합인포맥스",
+   "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTE4zd1JMNHZkbS1iVkdCaHNGR0VxQklzOGQxREI4ZV9PYll6VXE3UG0xeC1Bd2xMTDJDVmlSNnVXZ2t3SnBZU2FraE9Ua2JfWEo1dXNVdnBkT3Z4MHJSYU5MWXJfTnJ0RVI2WmVkd1hGaThIaS1K?oc=5",
+   "date": "2026-11-02T04:25:25.000Z"
   }
  ]
 }
