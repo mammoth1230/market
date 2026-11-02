@@ -37,7 +37,12 @@
       margin-top: 24px; padding: 8px 14px; border-radius: 8px;
       border: 1px solid #333; background: #222; color: #ddd; cursor: pointer;
     }
+    .tabs button { margin: 0 6px 8px 0; padding: 6px 12px; }
+    .tabs button.on { background: #f0b429; color: #111; border-color: #f0b429; }
+    .chart-box { position: relative; height: 260px; }
   </style>
+  <!-- 그래프 그리기 도구(Chart.js)를 공용 CDN에서 불러오기 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
   <div class="wrap">
@@ -47,6 +52,18 @@
     <h2>주요 지수 · 실시간 환율</h2>
     <div class="grid" id="quotes">불러오는 중…</div>
     <div class="note" id="quotes-note">출처: Yahoo Finance · GitHub Actions가 30분마다 수집</div>
+
+    <h2>추이</h2>
+    <div class="card">
+      <div class="tabs" id="sym-tabs"></div>
+      <div class="tabs">
+        <button data-days="22">1개월</button>
+        <button data-days="66">3개월</button>
+        <button data-days="250" class="on">1년</button>
+      </div>
+      <div class="chart-box"><canvas id="chart"></canvas></div>
+    </div>
+    <div class="note" id="chart-note">출처: data/history.json (날짜별 종가 기록)</div>
 
     <h2>암호화폐</h2>
     <div class="grid" id="coins">불러오는 중…</div>
@@ -136,10 +153,64 @@
       }
     }
 
+    // ── 4. 추이 그래프: data/history.json의 날짜별 기록으로 선 그래프 그리기 ──
+    const NAMES = { '^GSPC': 'S&P 500', '^IXIC': '나스닥', '^KS11': '코스피', '^KQ11': '코스닥', 'KRW=X': '원/달러' };
+    let hist = {}, sym = '^KS11', days = 250, chart;
+
+    function drawChart() {
+      const rows = (hist[sym] || []).slice(-days);   // 최근 N거래일만
+      const up = rows.length > 1 && rows[rows.length - 1][1] >= rows[0][1];
+      const color = up ? '#ff5a5a' : '#4d8dff';         // 기간 중 올랐으면 빨강, 내렸으면 파랑
+      if (chart) chart.destroy();                       // 예전 그래프 지우고 새로 그리기
+      chart = new Chart(document.getElementById('chart'), {
+        type: 'line',
+        data: {
+          labels: rows.map(r => r[0]),
+          datasets: [{ data: rows.map(r => r[1]), borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.2 }],
+        },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          interaction: { mode: 'index', intersect: false }, // 마우스를 올리면 그 날짜 값 표시
+          scales: {
+            x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
+            y: { ticks: { color: '#777' }, grid: { color: '#222' } },
+          },
+        },
+      });
+      document.getElementById('chart-note').textContent =
+        `출처: data/history.json · ${NAMES[sym]} ${rows.length}거래일 (${rows[0]?.[0]} ~ ${rows[rows.length - 1]?.[0]})`;
+    }
+
+    async function loadHistory() {
+      try {
+        hist = await (await fetch('data/history.json?t=' + Date.now())).json();
+        // 종목 버튼 만들기
+        document.getElementById('sym-tabs').innerHTML = Object.keys(NAMES).map(s =>
+          `<button data-sym="${s}" class="${s === sym ? 'on' : ''}">${NAMES[s]}</button>`
+        ).join('');
+        drawChart();
+      } catch (e) {
+        document.getElementById('chart-note').textContent = '추이 기록을 불러오지 못했어요.';
+      }
+    }
+
+    // 버튼 누르면: 같은 줄의 버튼 색을 바꾸고 그래프 다시 그리기
+    document.addEventListener('click', e => {
+      const b = e.target.closest('.tabs button');
+      if (!b) return;
+      b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      if (b.dataset.sym) sym = b.dataset.sym;
+      if (b.dataset.days) days = +b.dataset.days;
+      drawChart();
+    });
+
     function loadAll() {
       document.getElementById('time').textContent =
         '업데이트: ' + new Date().toLocaleString('ko-KR');
       loadQuotes();
+      loadHistory();
       loadCoins();
       loadFx();
     }
