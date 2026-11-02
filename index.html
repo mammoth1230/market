@@ -49,8 +49,22 @@
     }
     .count b { display: block; font-size: 26px; color: #6db3ff; }
     .count span { font-size: 11px; color: #777; }
-    .ev { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid #222; font-size: 14px; }
-    .ev .when { color: #888; white-space: nowrap; }
+    .main-tabs { margin: 24px 0 4px; border-bottom: 1px solid #262a33; }
+    .main-tabs button { margin: 0 4px -1px 0; border-radius: 8px 8px 0 0; padding: 8px 16px; font-size: 15px; }
+    button.small { margin: 8px 0 0; padding: 5px 10px; font-size: 13px; }
+    .cal-row { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #222; }
+    .cal-row:first-child { border-top: none; }
+    .cal-row.past { opacity: 0.5; }
+    .cal-day { width: 34px; text-align: center; flex: none; }
+    .cal-day b { display: block; font-size: 20px; }
+    .cal-day span { font-size: 12px; color: #888; }
+    .cal-body { flex: 1; min-width: 0; font-size: 14px; }
+    .cal-when { text-align: right; font-size: 12px; color: #aaa; white-space: nowrap; }
+    .cal-when b { display: block; font-size: 13px; color: #888; }
+    .cal-when b.dd { color: #6db3ff; }
+    details { margin-top: 6px; font-size: 13px; }
+    summary { cursor: pointer; color: #f0b429; }
+    details ul { margin: 6px 0 0; padding-left: 18px; color: #cfd6e4; line-height: 1.6; }
     .tag { font-size: 11px; color: #f0b429; margin-right: 6px; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; }
     th, td { padding: 7px 4px; text-align: right; border-top: 1px solid #222; }
@@ -90,9 +104,24 @@
 
     <h2>NEXT UP · 다가오는 일정</h2>
     <div class="card next"><div id="next">불러오는 중…</div><div class="news" id="next-news"></div></div>
-    <div class="card" id="events" style="margin-top: 12px;"></div>
-    <div class="note">시각은 모두 한국시간 · 일정 목록: data/events.json</div>
 
+    <!-- 맨 위 탭: 누르면 주소 끝이 #market / #calendar / #watch 로 바뀐다 -->
+    <div class="tabs main-tabs" id="main-tabs">
+      <button data-tab="market" class="on">시장 현황</button>
+      <button data-tab="calendar">주요 일정</button>
+      <button data-tab="watch">관심 종목</button>
+    </div>
+
+    <div id="tab-calendar" hidden>
+      <div id="calendar">불러오는 중…</div>
+      <div class="note">시각은 모두 한국시간 · 미국 발표는 ET(뉴욕 시간) 08:30 → 한국 밤, FOMC는 ET 14:00 → 한국 다음날 새벽 · 날짜 출처: 연준·BLS·ECB·일본은행·한국은행 공식 일정 · '잠정'은 공식 발표 전 예상일 · 일정 목록: data/events.json, 읽는 법: data/guides.json</div>
+    </div>
+
+    <div id="tab-watch" hidden>
+      <div class="card">관심 종목은 다음 단계(4묶음)에서 채울 예정이에요. 보고 싶은 종목을 알려 주세요.</div>
+    </div>
+
+    <div id="tab-market">
     <!-- 지수·유가·코인 카드 묶음: 아래 GROUPS 설정대로 자바스크립트가 채운다 -->
     <div id="groups"></div>
     <div class="note" id="quotes-note">지수·유가=Yahoo Finance(GitHub Actions 수집·장중 ~15분 지연) · 암호화폐 가격=CoinGecko(실시간) · 전일대비=직전 거래일 종가 기준 · 상승 빨강▲ / 하락 파랑▼</div>
@@ -129,6 +158,7 @@
     <div class="note">출처: 네이버 증권(비공식) · 당일 값은 장중 잠정치 · 빨강 순매수 / 파랑 순매도</div>
     <div class="news" id="n-flows"></div>
     <div class="note" id="news-note"></div>
+    </div>
 
     <button onclick="loadAll()">🔄 새로고침</button>
   </div>
@@ -363,7 +393,7 @@
       if (t && t.price >= 4.6) s.push(`미국 10년물 국채금리는 ${t.price.toFixed(2)}%로 경계선(4.6%) 위에 있습니다.`);
 
       // 다음 큰 일정
-      const next = events.find(e => e.at > Date.now());
+      const next = nextBig();
       if (next) {
         const d = new Date(next.at);
         const [, mo, dd] = KDAY.format(d).split('-').map(Number);
@@ -395,17 +425,22 @@
     function renderNews() {
       document.getElementById('n-credit').innerHTML = newsHtml(news.credit);
       document.getElementById('n-flows').innerHTML = newsHtml(news.flows);
-      const next = events.find(e => e.at > Date.now());
-      document.getElementById('next-news').innerHTML = news.next && next && news.next.title === next.title
-        ? '<div class="note">발표 전 · 관련 뉴스</div>' + newsHtml(news.next.items) : '';
+      const next = nextBig();
+      const items = next && (news.events || {})[next.title];
+      document.getElementById('next-news').innerHTML = items && items.length
+        ? '<div class="note">발표 전 · 관련 뉴스</div>' + newsHtml(items) : '';
+      renderCalendar();   // 일정 탭의 뉴스도 함께
     }
 
     // 버튼 누르면: 같은 줄의 버튼 색을 바꾸고, 그 버튼이 맡은 일 하기
     document.addEventListener('click', e => {
+      if (e.target.id === 'past-btn') { showPast = !showPast; renderCalendar(); return; }
       const b = e.target.closest('.tabs button');
       if (!b) return;
+      if (b.dataset.tab) { location.hash = b.dataset.tab; return; }   // 맨 위 탭은 주소로
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('on'));
       b.classList.add('on');
+      if (b.dataset.cat) { cat = b.dataset.cat; renderCalendar(); return; }
       if (b.dataset.mkt) { mkt = b.dataset.mkt; drawFlows(); return; }
       if (b.dataset.range) {
         const id = b.parentElement.dataset.group;
@@ -449,10 +484,14 @@
       return KST.format(d);
     }
 
+    // 카운트다운·요약에 쓸 '큰 일정' = 휴장 안내를 뺀 다음 일정
+    function nextBig() {
+      return events.find(e => e.at > Date.now() && e.kind !== 'HOLIDAY');
+    }
+
     function tick() {
       const now = Date.now();
-      const upcoming = events.filter(e => e.at > now);   // 지난 일정은 빼기
-      const next = upcoming[0];
+      const next = nextBig();
       if (!next) {
         document.getElementById('next').textContent = '등록된 다음 일정이 없어요. data/events.json에 추가해 주세요.';
         return;
@@ -462,28 +501,89 @@
       const parts = [[Math.floor(s / 86400), '일'], [Math.floor(s % 86400 / 3600), '시간'],
                      [Math.floor(s % 3600 / 60), '분'], [s % 60, '초']];
       document.getElementById('next').innerHTML = `
-        <div class="name"><span class="tag">${next.type}</span></div>
+        <div class="name"><span class="tag">${next.tag}</span>${next.cat}</div>
         <div class="title">${next.title}</div>
-        <div class="name">한국시간 ${when(new Date(next.at))}</div>
+        <div class="name">한국시간 ${when(new Date(next.at))}${next.local ? ' · ' + next.local : ''}${next.tentative ? ' · 잠정' : ''}</div>
         <div class="count">${parts.map(([n, u]) =>
           `<div><b>${String(n).padStart(2, '0')}</b><span>${u}</span></div>`).join('')}</div>`;
-      document.getElementById('events').innerHTML = upcoming.slice(1, 7).map(e =>
-        `<div class="ev"><div><span class="tag">${e.type}</span>${e.title}</div>
-         <div class="when">${when(new Date(e.at))}</div></div>`).join('');
+      if (s === 0) { renderCalendar(); renderNews(); }   // 일정 하나가 지나가면 목록도 새로
     }
 
     async function loadEvents() {
       try {
-        const list = await (await fetch('data/events.json?t=' + Date.now())).json();
+        const [list, g] = await Promise.all(['events', 'guides'].map(f =>
+          fetch(`data/${f}.json?t=` + Date.now()).then(r => r.ok ? r.json() : {})));
         events = list.map(e => ({ ...e, at: new Date(e.date).getTime() }))
                      .sort((a, b) => a.at - b.at);       // 날짜순 정렬
+        guides = g;
         tick();
+        renderCalendar();
         renderSummary();   // 요약 문장의 '다음 큰 일정'과 일정 뉴스도 다시
         renderNews();
       } catch (e) {
         document.getElementById('next').textContent = '일정을 불러오지 못했어요.';
+        console.error(e);
       }
     }
+
+    // ── 8. 주요 일정 탭: 분류 버튼 + 달별 묶음 + 읽는 법 + 관련 뉴스 ──
+    const CATS = ['전체', '중앙은행·금리', '미국 경제지표', '기업 실적', '증시 수급', '상장·정치'];
+    let guides = {}, cat = '전체', showPast = false;
+    const MONTH = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long' });
+    const DAYNUM = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', day: 'numeric' });
+    const HM = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
+
+    function dday(at) {
+      // 한국 날짜 기준으로 오늘부터 며칠 남았나
+      const d = (a) => new Date(KDAY.format(new Date(a)) + 'T00:00:00Z').getTime();
+      const n = Math.round((d(at) - d(Date.now())) / 864e5);
+      return n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : 'D+' + (-n);
+    }
+
+    function eventRow(e) {
+      const g = guides[e.kind];
+      const items = (news.events || {})[e.title];
+      const past = e.at <= Date.now();
+      return `<div class="cal-row${past ? ' past' : ''}">
+        <div class="cal-day"><b>${DAYNUM.format(new Date(e.at)).replace('일', '')}</b><span>${KWD.format(new Date(e.at))}</span></div>
+        <div class="cal-body">
+          <div><span class="tag">${e.tag}</span><b>${e.title}</b>${e.tentative ? '<span class="badge b-warn">잠정</span>' : ''}</div>
+          ${e.desc ? `<div class="note" style="margin-top: 4px">${e.desc}</div>` : ''}
+          ${g ? `<details><summary>📖 ${g.title}</summary><ul>${g.points.map(p => `<li>${p}</li>`).join('')}</ul></details>` : ''}
+          ${items && items.length && !past ? `<div class="news"><div class="note">발표 전 · 관련 뉴스</div>${newsHtml(items)}</div>` : ''}
+        </div>
+        <div class="cal-when"><b class="${past ? '' : 'dd'}">${dday(e.at)}</b>
+          <div>${e.kind === 'HOLIDAY' ? '' : HM.format(new Date(e.at))}</div>
+          <div class="when">${e.local || ''}</div></div>
+      </div>`;
+    }
+
+    function renderCalendar() {
+      const box = document.getElementById('calendar');
+      if (!box) return;
+      const now = Date.now();
+      const list = events.filter(e => cat === '전체' || e.cat === cat);
+      const past = list.filter(e => e.at <= now), coming = list.filter(e => e.at > now);
+      // 달별로 묶기
+      const groups = {};
+      for (const e of showPast ? list : coming) (groups[MONTH.format(new Date(e.at))] ||= []).push(e);
+      box.innerHTML =
+        `<div class="tabs">${CATS.map(c => `<button data-cat="${c}" class="${c === cat ? 'on' : ''}">${c}</button>`).join('')}</div>` +
+        (past.length ? `<button class="small" id="past-btn">${showPast ? '▾ 지난 일정 숨기기' : `▸ 지난 일정 ${past.length}개 펼치기`}</button>` : '') +
+        Object.entries(groups).map(([m, es]) =>
+          `<h2>${m} <span class="when">${es.length}개</span></h2><div class="card">${es.map(eventRow).join('')}</div>`).join('') +
+        (coming.length ? '' : '<div class="card">이 분류에 남은 일정이 없어요.</div>');
+    }
+
+    // ── 9. 맨 위 탭 바꾸기: 주소 끝 #calendar 처럼 기억해서 새로고침해도 그대로 ──
+    function showTab(id) {
+      for (const t of ['market', 'calendar', 'watch'])
+        document.getElementById('tab-' + t).hidden = t !== id;
+      document.querySelectorAll('#main-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === id));
+      if (id === 'market') Object.values(charts).forEach(c => c.resize());   // 숨어 있던 그래프 크기 다시 맞추기
+    }
+    window.addEventListener('hashchange', () =>
+      showTab(['market', 'calendar', 'watch'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'market'));
 
     // ── 6. 신용잔고·예탁금: data/credit.json 읽기 (rows = [날짜, 코스피 신용, 코스닥 신용, 예탁금]) ──
     let creditChart;
@@ -541,6 +641,7 @@
     }
 
     loadAll();
+    showTab(['market', 'calendar', 'watch'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'market');
     setInterval(loadCoins, 60 * 1000); // 코인은 1분마다 자동 갱신
     setInterval(tick, 1000);           // 카운트다운은 1초마다
   </script>
