@@ -1,6 +1,7 @@
 // GitHub Actions가 30분마다 실행하는 수집 스크립트
 // 브라우저에서는 CORS 때문에 못 가져오는 Yahoo Finance 데이터를 대신 모아서
 // data/latest.json(최신값)과 data/history.json(날짜별 기록)으로 저장한다.
+// 금융투자협회 신용잔고·예탁금은 data/credit.json으로 저장한다.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
@@ -85,3 +86,34 @@ await writeFile('data/latest.json', JSON.stringify(data, null, 2) + '\n');
 await writeFile('data/history.json', JSON.stringify(history) + '\n');
 console.log(JSON.stringify(data, null, 2));
 for (const s in history) console.log(s, history[s].length + '일치 기록');
+
+// ── 신용융자잔고 · 투자자예탁금: 금융투자협회 통계(FreeSIS) ──
+// 금투협 통계 사이트가 표를 채울 때 쓰는 주소에 '어떤 표, 어느 기간'을 보내면 JSON으로 돌려준다
+async function getKofia(table, from, to) {
+  const res = await fetch('https://freesis.kofia.or.kr/meta/getMetaDataList.do', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=UTF-8', 'User-Agent': 'Mozilla/5.0' },
+    body: JSON.stringify({ dmSearch: { tmpV40: '1000000', tmpV41: '1', tmpV1: 'D', tmpV45: from, tmpV46: to, OBJ_NM: table } }),
+  });
+  if (!res.ok) throw new Error(`금투협 ${table}: HTTP ${res.status}`);
+  return (await res.json()).ds1; // [{ TMPV1: '20261029', TMPV2: ..., ... }, ...] 최신 날짜가 앞
+}
+
+try {
+  const ymd = d => d.toISOString().slice(0, 10).replaceAll('-', '');
+  const to = ymd(new Date());
+  const from = ymd(new Date(Date.now() - 400 * 24 * 3600 * 1000));
+  const funds = await getKofia('STATSCU0100000060BO', from, to);  // 증시자금: TMPV2 = 투자자예탁금
+  const credit = await getKofia('STATSCU0100000070BO', from, to); // 신용공여: TMPV3 = 코스피, TMPV4 = 코스닥
+  const deposit = Object.fromEntries(funds.map(r => [r.TMPV1, r.TMPV2]));
+
+  // 날짜별 [날짜, 코스피 신용, 코스닥 신용, 예탁금] (단위: 조원, 소수 둘째 자리)
+  const jo = v => Math.round(v / 1e4) / 100; // 백만원 → 조원
+  const rows = credit
+    .map(r => [r.TMPV1.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'), jo(r.TMPV3), jo(r.TMPV4), jo(deposit[r.TMPV1] ?? NaN)])
+    .sort(([a], [b]) => a.localeCompare(b));
+  await writeFile('data/credit.json', JSON.stringify({ updated: new Date().toISOString(), rows }) + '\n');
+  console.log('신용잔고', rows.length + '일치, 최근:', rows[rows.length - 1]);
+} catch (e) {
+  console.error('신용잔고 실패:', e.message); // 실패해도 지수 데이터는 그대로 저장된다
+}
