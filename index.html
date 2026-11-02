@@ -40,6 +40,18 @@
     .tabs button { margin: 0 6px 8px 0; padding: 6px 12px; }
     .tabs button.on { background: #f0b429; color: #111; border-color: #f0b429; }
     .chart-box { position: relative; height: 260px; }
+    .next { border-left: 4px solid #f0b429; }
+    .next .title { font-size: 20px; font-weight: bold; margin: 6px 0 2px; }
+    .count { display: flex; gap: 8px; margin-top: 14px; }
+    .count div {
+      background: #0f1115; border: 1px solid #262a33; border-radius: 8px;
+      padding: 8px 0; width: 64px; text-align: center;
+    }
+    .count b { display: block; font-size: 26px; color: #6db3ff; }
+    .count span { font-size: 11px; color: #777; }
+    .ev { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid #222; font-size: 14px; }
+    .ev .when { color: #888; white-space: nowrap; }
+    .tag { font-size: 11px; color: #f0b429; margin-right: 6px; }
   </style>
   <!-- 그래프 그리기 도구(Chart.js)를 공용 CDN에서 불러오기 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -48,6 +60,11 @@
   <div class="wrap">
     <h1>📊 My Market Calendar</h1>
     <div class="sub" id="time"></div>
+
+    <h2>NEXT UP · 다가오는 일정</h2>
+    <div class="card next" id="next">불러오는 중…</div>
+    <div class="card" id="events" style="margin-top: 12px;"></div>
+    <div class="note">시각은 모두 한국시간 · 일정 목록: data/events.json</div>
 
     <h2>주요 지수 · 실시간 환율</h2>
     <div class="grid" id="quotes">불러오는 중…</div>
@@ -206,9 +223,56 @@
       drawChart();
     });
 
+    // ── 5. 다가오는 일정: data/events.json을 읽어 다음 일정까지 카운트다운 ──
+    let events = [];
+
+    // 날짜를 '11. 26. (목) 오전 10:00' 처럼, 해외에서 봐도 항상 한국시간으로
+    const KST = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric',
+      weekday: 'short', hour: 'numeric', minute: '2-digit',
+    });
+    function when(d) {
+      return KST.format(d);
+    }
+
+    function tick() {
+      const now = Date.now();
+      const upcoming = events.filter(e => e.at > now);   // 지난 일정은 빼기
+      const next = upcoming[0];
+      if (!next) {
+        document.getElementById('next').textContent = '등록된 다음 일정이 없어요. data/events.json에 추가해 주세요.';
+        return;
+      }
+      // 남은 시간을 일·시·분·초로 나누기
+      const s = Math.floor((next.at - now) / 1000);
+      const parts = [[Math.floor(s / 86400), '일'], [Math.floor(s % 86400 / 3600), '시간'],
+                     [Math.floor(s % 3600 / 60), '분'], [s % 60, '초']];
+      document.getElementById('next').innerHTML = `
+        <div class="name"><span class="tag">${next.type}</span></div>
+        <div class="title">${next.title}</div>
+        <div class="name">한국시간 ${when(new Date(next.at))}</div>
+        <div class="count">${parts.map(([n, u]) =>
+          `<div><b>${String(n).padStart(2, '0')}</b><span>${u}</span></div>`).join('')}</div>`;
+      document.getElementById('events').innerHTML = upcoming.slice(1, 7).map(e =>
+        `<div class="ev"><div><span class="tag">${e.type}</span>${e.title}</div>
+         <div class="when">${when(new Date(e.at))}</div></div>`).join('');
+    }
+
+    async function loadEvents() {
+      try {
+        const list = await (await fetch('data/events.json?t=' + Date.now())).json();
+        events = list.map(e => ({ ...e, at: new Date(e.date).getTime() }))
+                     .sort((a, b) => a.at - b.at);       // 날짜순 정렬
+        tick();
+      } catch (e) {
+        document.getElementById('next').textContent = '일정을 불러오지 못했어요.';
+      }
+    }
+
     function loadAll() {
       document.getElementById('time').textContent =
         '업데이트: ' + new Date().toLocaleString('ko-KR');
+      loadEvents();
       loadQuotes();
       loadHistory();
       loadCoins();
@@ -217,6 +281,7 @@
 
     loadAll();
     setInterval(loadCoins, 60 * 1000); // 코인은 1분마다 자동 갱신
+    setInterval(tick, 1000);           // 카운트다운은 1초마다
   </script>
 </body>
 </html>
