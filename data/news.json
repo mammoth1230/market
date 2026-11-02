@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-02T20:14:49.158Z",
+ "updated": "2026-11-02T21:12:09.617Z",
  "events": {
   "미국 중간선거 (상·하원)": [
    {
@@ -45,10 +45,10 @@
  "sp500": [
   {
    "tag": "현황",
-   "title": "[마켓뷰] 코스피, '인텔 급락 등 美증시 삭풍' 이어받나",
-   "source": "연합뉴스",
-   "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTE40MlpoXzdXOW13YWJXZkk5b3hqa0NxbDNEYUFRMHJnUkRKWGdrRXZXVWxzTWV6RWt1S2gxUzUyaG1FeDduQm1xUXFhYXl2dDNrb2Niak5DTEZ2RTFuUUQ1QtIBYEFVX3lxTE40MlpoXzdXOW13YWJXZkk5b3hqa0NxbDNEYUFRMHJnUkRKWGdrRXZXVWxzTWV6RWt1S2gxUzUyaG1FeDduQm1xUXFhYXl2dDNrb2Niak5DTEZ2RTFuUUQ1Qg?oc=5",
-   "date": "2026-11-01T23:05:20.000Z"
+   "title": "美나스닥 반등·유가 6% 급락…코스피 2.24% 상승에도 외국인 '삼전닉스' 수급 엇갈려",
+   "source": "녹색경제신문",
+   "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE9sc2NaN2dza05xV3JGNWFGbE5VcmZFc3RIT251U0EzckZOUWRkRmlOX1pfVUdxQ0hvWVE1RGRnOV9QMkU4emtiMkN0TjN5THBIVFU5VnRhVmFTOGl1UlBYQ2UxZWNaYm8?oc=5",
+   "date": "2026-11-02T15:03:35.000Z"
   },
   {
    "tag": "전망",
@@ -61,10 +61,10 @@
  "nasdaq": [
   {
    "tag": "현황",
-   "title": "美나스닥 반등·유가 6% 급락…코스피 2.24% 상승에도 외국인 '삼전닉스' 수급 엇갈려",
-   "source": "녹색경제신문",
-   "link": "https://news.google.com/rss/articles/CBMiaEFVX3lxTE04QnNvRGhiczQwM0NYLVpHVXJJaHA3clVnNG9qWVhhXzJ3UWp5dFZ0Z1pEOUc4VzRXR1VTWlpVZ1BTZGI4MUZFbmRTby1qUTY1akw1OUxiS2VaUlhYU3ZiQmpUY2pqaEhz?oc=5",
-   "date": "2026-11-02T15:03:35.000Z"
+   "title": "[속보]뉴욕증시, 혼조 마감…나스닥 1.07%↓",
+   "source": "뉴시스",
+   "link": "https://news.google.com/rss/articles/CBMiYEFVX3lxTFBJbXlrUV9hMDdVMmg1QlZnYXRRdTI1Ylhpd2hYSE9LUXpGc0ZHUFJ2TURydmFLc1d1Y3VsVlFJWF9zRmllY0JVaWZBaG5QY3REbnNaV0p3ajlyeVp5SkxmbNIBeEFVX3lxTE5SNFhVVnN6WTNRd2M0OG9lODh5dHVBSlNSRks2ZUs0TXZidk5qLXZ2RWpOQkk0TjJacGtCY0swMW10MUlrbUtvajRQVlduemVxc20zSW5JVXo0YUp3aHpsMDk2bzlDWXBkai1GeGhrZnptYWNkSWU2aw?oc=5",
+   "date": "2026-11-02T21:05:52.000Z"
   },
   {
    "tag": "전망",
@@ -102,10 +102,10 @@
  "wti": [
   {
    "tag": "현황",
-   "title": "국제유가 6% 급락…美·이란 외교적 해결 기대에 WTI 100달러 아래로",
-   "source": "뉴스핌",
-   "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTFAzVE1wVVZuNlViQnFndXZDc3hoYkxMWWs3ZXVKang0WGNoRzYyVGFDbEx3bWZoZ2VMMHpKQ1c3bHhNc2J0b2pnTDYtR0JxR3ZIZWIycU94aG9OUFFM?oc=5",
-   "date": "2026-11-02T14:11:00.000Z"
+   "title": "미·이란 협상 기대에 국제유가 7%대 급락…WTI 96달러선",
+   "source": "연합뉴스",
+   "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE95VU13WUVnUU1LQVE5NE5OaWZLZVNENkxHazJIWUJhMjF2OGRNRTVjWUdxaHZLeWxJX0tGb19xRGNuOTIwVHJ6NlkyU0xyVjBleXZmSzVaWjhJbTjSAWBBVV95cUxQTWNpa1lnUURGUm8xVGpuQjlhOGFyRHkzODJ6YVpBeHQwTDUyY1Ria19SU1hYMndYclZOSjRiUkxFbWIwTmxrTnNadWstS2pQbGxhQVY0VmFaUmt6ajBoREs?oc=5",
+   "date": "2026-11-02T21:03:41.000Z"
   },
   {
    "tag": "중동",
@@ -141,10 +141,10 @@
   },
   {
    "tag": "전망",
-   "title": "AI주 붕괴 시 비트코인 동반 하락 뒤 반등…이더리움·솔라나는 회복 늦다",
-   "source": "코인리더스",
-   "link": "https://news.google.com/rss/articles/CBMiSkFVX3lxTE9ya1UtMzVFZGFXajhTSHFjRW5MTXJmaTVYZ0pfNkRUT3k3eldCZm0wRVNyUWE2NjJOYjJlVTFpUTktNno0c2czZy1B?oc=5",
-   "date": "2026-11-02T19:52:19.000Z"
+   "title": "\"바이낸스 비트코인 잔액 4일 연속 감소…해킹 전보다 2만3200 BTC↓\"",
+   "source": "블루밍비트",
+   "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE4xMVZkVWxzWnVXT3Z1SENZcnpRelpBaVBkRmtFWExtOWxZb1MyaHVBU1VtX2JVdk5xLVZDS3BpdEstaC1vSWRPb0pPUEJ3UlVY?oc=5",
+   "date": "2026-11-02T08:03:10.000Z"
   }
  ],
  "eth": [
@@ -157,10 +157,10 @@
   },
   {
    "tag": "전망",
-   "title": "비트마인, 이더리움 8573개 추가 매수…보유량 606만개 돌파",
-   "source": "블루밍비트",
-   "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE1lZnpSZWR5YVlEQW96RTBld3g3QWlfQVAzLU5qSlU5d1ZuMjdZUnJLMXRiZnlmMzdlMkZxT0JhR0RKa1NpUTFWZ1d2TXdpZkJK?oc=5",
-   "date": "2026-11-02T13:35:56.000Z"
+   "title": "모건 스탠리, 코인베이스(COIN) 실적 전망 부진에 따라 투자의견 하향 및 목표주가 53% 하향 조정",
+   "source": "CoinDesk",
+   "link": "https://news.google.com/rss/articles/CBMiygFBVV95cUxNOFBDMnhJUzZjZzdudFdTOHlHUjJRUjVra2x1Ry1lQzVKb2h3RG82M2hjS2w1SjRVRG52UFpuZV9yVTl6ejkyX0NTN3p0SWNqNzBaTjFTVlMzX09aSFlTWXlqNmFMdXBzYkhhMGZDMG1ZTF9DTV9vM1BmVjJZQ0U2N2wyLXhIZWNGZEsyMDdtcFZfOFpTaHVXa3EzUk5JY0Z3QkpsRUhEZFdaUnk1dVhwb3IyUnVaV1BnUUNLR3FHRVYwdzdpZVZtaHlR?oc=5",
+   "date": "2026-11-02T14:29:33.000Z"
   }
  ],
  "krw": [
@@ -205,10 +205,10 @@
  "flows": [
   {
    "tag": "",
-   "title": "[외환] 코스피 반등에 동반 상승…외인 달러선물 매수",
-   "source": "연합인포맥스",
-   "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTE5PY2RUUXBucXBxdElBbnJwaWFlQS02TVVVSmJvN01wREdQSXA0azNsRTZiU1N6VGZPNFR5LS1qZWw2ZEpTY25DSDdlWGJzZ3o4OEI0bjZhREd4dE9KVDFCbFZld3h6TDkxRkVHTUt0azEyQjFn0gF0QVVfeXFMTk9jZFRRcG5xcHF0SUFucnBpYWVBLTZNVVVKYm83TXBER1BJcDRrM2xFNmJTU3pUZk80VHktLWplbDZkSlNjbkNIN2VYYnNnejg4QjRuNmFER3h0T0pUMUJsVmV3eHpMOTFGRUdNS3RrMTJCMWc?oc=5",
-   "date": "2026-11-02T04:25:25.000Z"
+   "title": "외국인 매도세 막아선 연기금…급락장서 9000억 '사자' 증시 버팀목",
+   "source": "뉴스1",
+   "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTE5BcldaWWMwU1lkUjUzcnhwRnhyV2U5STZVMHFGNzNuZHgyV2c3bm5QcXE4T25jcV9jWF9ibGtnV0Jpc19pQTBzbThHcWZVNldGVGd5c010WFVaLU0?oc=5",
+   "date": "2026-11-02T21:00:00.000Z"
   },
   {
    "tag": "",
