@@ -242,13 +242,14 @@ try {
     }
   };
 
-  // 다음 일정 관련 뉴스: events.json에서 아직 안 지난 첫 일정의 제목으로 검색
+  // 다가오는 일정 2개(휴장 제외)의 관련 뉴스: 일정 제목으로 검색해서 { 제목: [기사] } 로 저장
   const events = JSON.parse(await readFile('data/events.json', 'utf8'))
-    .filter(e => new Date(e.date) > new Date())
+    .filter(e => new Date(e.date) > new Date() && e.kind !== 'HOLIDAY')
     .sort((a, b) => new Date(a.date) - new Date(b.date));
-  if (events[0]) {
-    const q = events[0].title.replace(/\(.*?\)/g, '').trim();  // 괄호 설명은 빼고 검색
-    news.next = { title: events[0].title, items: await take(q, 3) };
+  news.events = {};
+  for (const e of events.slice(0, 2)) {
+    const q = e.title.replace(/\(.*?\)/g, '').replace(/[—+]/g, ' ').trim();  // 괄호 설명·기호는 빼고 검색
+    news.events[e.title] = await take(q, 3);
   }
 
   for (const [key, list] of Object.entries(NEWS)) {
@@ -259,7 +260,7 @@ try {
     }
   }
   await writeFile('data/news.json', JSON.stringify({ updated: new Date().toISOString(), ...news }, null, 1) + '\n');
-  console.log('뉴스', Object.entries(news).map(([k, v]) => k + ':' + (v.items || v).length).join(' '));
+  console.log('뉴스', Object.entries(news).map(([k, v]) => k + ':' + Object.keys(v).length).join(' '));
 } catch (e) {
   console.error('뉴스 실패:', e.message);
 }
