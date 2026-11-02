@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-02T09:54:39.290Z",
+ "updated": "2026-11-02T10:52:48.411Z",
  "events": {
   "미국 중간선거 (상·하원)": [
    {
@@ -29,16 +29,16 @@
     "date": "2026-11-02T06:23:36.000Z"
    },
    {
+    "title": "애플 실적·미국 고용지표 주목…10월 CPI는 10일 발표",
+    "source": "비건뉴스",
+    "link": "https://news.google.com/rss/articles/CBMiZkFVX3lxTFBobDdzVG1jZ0h5MGJfbDBvNm83MnRWemd6UU91SC13VVpUSXlfSDRlUHVVZ3B1T1hWVHpZSFRrSzFrcHBVcDgzUEJTN0xFMDdGVGpveVo4bGJUOFNFUGlKbkhnVFhCQQ?oc=5",
+    "date": "2026-11-02T10:13:13.000Z"
+   },
+   {
     "title": "[주간 뉴욕증시] 美중간선거·고용보고서 주목…애플·AMD 실적도 변수",
     "source": "뉴시스",
     "link": "https://news.google.com/rss/articles/CBMieEFVX3lxTE1IemlTZWtTRkkwSmVlRnhMTnFqOVlWMzBtczVpS1lheXVtak81TERMUXI2cXlaZlpGZ2NLQ0hkc0g2WVVBVnFjeHpLbTVDTEFESGRkaHhJYmkwczRKaDZCbXFkbU45eFd1czNJOGUwaXRKM2x2cFFodtIBeEFVX3lxTE1IemlTZWtTRkkwSmVlRnhMTnFqOVlWMzBtczVpS1lheXVtak81TERMUXI2cXlaZlpGZ2NLQ0hkc0g2WVVBVnFjeHpLbTVDTEFESGRkaHhJYmkwczRKaDZCbXFkbU45eFd1czNJOGUwaXRKM2x2cFFodg?oc=5",
     "date": "2026-11-02T00:50:30.000Z"
-   },
-   {
-    "title": "[미리보는 증시재료] 美 중간선거·고용지표에 실적까지…코스피 반등 이어질까",
-    "source": "뉴스핌",
-    "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE5DX3N6ZVJQS2hJZmhLRk5USnAzY0thODRYZGNLMWx3dVJsOU0zOExtZmtNeDZXVTI2bUVWY0trVHVDTGtlVGNjMEw5RWZJTF9nSTB4RmhDMlAzSUxh?oc=5",
-    "date": "2026-11-01T21:00:00.000Z"
    }
   ]
  },
@@ -77,10 +77,10 @@
  "kospi": [
   {
    "tag": "현황",
-   "title": "코스피, 2.24% 오른 5,859.08에 마감…코스닥, 1.38%↑",
+   "title": "미 기술주 급락에도…코스피 2%대 상승 마감",
    "source": "연합뉴스TV",
-   "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFAyZVJ4LTducGdpbUxPdUhSV3BqMHE2NlJ6MDNCUUpfOU1iZnBYM29lSThtNkwzZkwtcDNRNDlIMmJRQ0ZOVHRYYlBiT1JDTEo2bFQ3dXhPcmMtSU44VWxVRzh1X3FKQ00?oc=5",
-   "date": "2026-11-02T06:37:00.000Z"
+   "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFBURUJkWU15RFl3aU9LVkp3MF9GSlUxNVdENmhmR09od0VzTzMxRkJzQUhHMjF6SDZ5R29VOU5CaEROdjlaeTRvckRaTHJONkVZRnpLVlljVHZvREZ4dFVrRmtZLV9wUDA?oc=5",
+   "date": "2026-11-02T09:35:00.000Z"
   },
   {
    "tag": "전망",
@@ -93,19 +93,19 @@
  "kosdaq": [
   {
    "tag": "현황",
-   "title": "하락 출발 코스피, 반등 성공 2% 상승 마감···코스닥도 730선 회복",
-   "source": "대구MBC",
-   "link": "https://news.google.com/rss/articles/CBMiTEFVX3lxTFBxcW9nSldqLWItU3FjNUxHTXRseEZLSG9RbWpLYUptSEtFMWQ2ekl5dHJjcW1CSmkta25BcDBicklfRG8wN2lFWDJBNGk?oc=5",
-   "date": "2026-11-02T07:02:11.000Z"
+   "title": "코스피, 2.24% 오른 5,859.08에 마감…코스닥, 1.38%↑",
+   "source": "연합뉴스TV",
+   "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFAyZVJ4LTducGdpbUxPdUhSV3BqMHE2NlJ6MDNCUUpfOU1iZnBYM29lSThtNkwzZkwtcDNRNDlIMmJRQ0ZOVHRYYlBiT1JDTEo2bFQ3dXhPcmMtSU44VWxVRzh1X3FKQ00?oc=5",
+   "date": "2026-11-02T06:37:00.000Z"
   }
  ],
  "wti": [
   {
    "tag": "현황",
-   "title": "원달러 환율 1330원대 상승…국제유가는 하락",
-   "source": "중기이코노미",
-   "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE5kYkFRLU0xSzk5RVppTnNnaVIxNGVlQmZHOEc5d0lKb0RJaWJtT2F3ZDBSdTN2SVlJRWZQMUVQcnRmU2hWaWRuWGVHLUZFbGV2bGpFWi00RjRfQ3UyLTRaRk9pNzhpa2hOZFE?oc=5",
-   "date": "2026-11-02T01:36:18.000Z"
+   "title": "WTI 선물, 3% 넘게 하락…\"트럼프, 외교적 해결 원해\"(상보)",
+   "source": "연합인포맥스",
+   "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBKZ1dUbW1Bb2RUOG9zQWNTUXFhNzlfRFppQU9IX3BYdXlxU3puNWJvUWFGcElsM0xFaU0yVk5teVRJYVlXaXNEUkx5WVF4bjVOQ1B0bVZMWXhOQTdzMUp4eFIwRktEeTFJV2FXSEVxeUc?oc=5",
+   "date": "2026-11-02T05:56:33.000Z"
   },
   {
    "tag": "중동",
@@ -157,19 +157,19 @@
   },
   {
    "tag": "전망",
-   "title": "美 비트코인 현물 ETF, 지난주 2억300만달러 순유출…이더리움도 자금 이탈",
-   "source": "블루밍비트",
-   "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE5IajRKRnViX0N0aG42UEJsd0E1Sk15Y2Roa0pTS01WcEd2Q1NBWWNLbDBPUnQwQWtjMTl5VEdpdkhETnJJNGY2bnpfbTlZeU1p?oc=5",
-   "date": "2026-11-02T04:37:36.000Z"
+   "title": "코인 투자자 68.5% \"현행대로 내년 과세 무리\"… 43.6%는 '추가 유예' 전망",
+   "source": "더스탁(The Stock)",
+   "link": "https://news.google.com/rss/articles/CBMiakFVX3lxTE5icktoSTdrdDVhZ0ZnV3NBWjBYMGlqQ3IxaGFxRzR4M1Fscm5YZDYxSDVDUUlPRmRUUzFWQWtlNUZrZGh5YzViZEpqd3pHaWRfd0g0cFY2a1Z2N2xDb3RoTU9hSlVkSnBHRmc?oc=5",
+   "date": "2026-11-02T05:43:45.000Z"
   }
  ],
  "krw": [
   {
    "tag": "현황",
-   "title": "원·달러 환율, 9.5원 오른 1343.8원 마감",
-   "source": "뉴시스",
-   "link": "https://news.google.com/rss/articles/CBMieEFVX3lxTE5NUmQ2cTlBMm1tZnJtYVpIZXdSRVRWN3d4UWhUTFV5cjhFNWtadmtTMGdwdWxla3kxRDlBdW80WGRjWDNQZVFBQ2JfMDlpRTZ1TVZQeV84dzFpaWIyRzVPcG9US3pvZG5oblZ3Q3h3X2pJay16NktQddIBeEFVX3lxTE5NUmQ2cTlBMm1tZnJtYVpIZXdSRVRWN3d4UWhUTFV5cjhFNWtadmtTMGdwdWxla3kxRDlBdW80WGRjWDNQZVFBQ2JfMDlpRTZ1TVZQeV84dzFpaWIyRzVPcG9US3pvZG5oblZ3Q3h3X2pJay16NktQdQ?oc=5",
-   "date": "2026-11-02T06:56:42.000Z"
+   "title": "[외환-마감] 코스피 반등·外人 '사자'로 상승…9.50원↑",
+   "source": "KB Think",
+   "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE1hSlpXSmZubWZEN1JKS19Da1ljTjlWMUh6a0dNdTlhU3VLN244SzZZQ2RFVm5rQnZyb25aLVZCWHJsV0dwU0tSSTJUZTY5QXA3ZVIzSXBwQzVrb0NwSG1Ya2JBMzMwWkpiOHRjZ0FkVG5jUQ?oc=5",
+   "date": "2026-11-02T07:14:55.000Z"
   },
   {
    "tag": "현황",
@@ -229,9 +229,9 @@
   {
    "tag": "미국",
    "title": "\"워시 연준 의장의 12월 금리 인상 의지 의심스러워\"",
-   "source": "KB Think",
-   "link": "https://news.google.com/rss/articles/CBMickFVX3lxTE5pUnJvei1aZDZjUzNVSTRoa1R1azdhbUZXSVF5cHNzZ012cW5TZUc2WnpETkc2QXlLOFhXdHdVdzJfWWJ5MWhfeU4xbFJ2R3lwY0JoUXdueEJOQUVQN1lPbTBfUnMzdFM2TFh5QmU4TEJWUQ?oc=5",
-   "date": "2026-11-02T01:31:28.000Z"
+   "source": "연합인포맥스",
+   "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBWMHM2YUNVRFRnU2VMZWR0TWNvLVRJejlfU1M0VnVDdWcyM05yR0IzaFR6S0Q3WkRMS3JJeVpPSDFSQUVUY3BLMm1tQnR6RjZXZ2wyQzdaZW1QRTBnbHN1bTg3bWFvVHV1eGd5X0tpeWs?oc=5",
+   "date": "2026-11-02T03:31:29.000Z"
   },
   {
    "tag": "유럽",
@@ -242,10 +242,10 @@
   },
   {
    "tag": "일본",
-   "title": "\"일본은행, 연말 추가 금리인상 전망…엔화 강세는 제한적\"",
-   "source": "뉴스투데이",
-   "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9vWkZpa0hmNi1XZ1RFQnpYcTZYU29fSXZ0RUxDNEVZX1JmZldpa3h4eE1DSXdwXzdHUE9ZVjJiOEpmTjh6VFAwWTVyZDRMcEFGRWZiM3JnQ1F6cnBCWUE?oc=5",
-   "date": "2026-11-02T00:41:00.000Z"
+   "title": "UBS “일본 실질금리 마이너스 지속, 달러/엔 지지 요인”",
+   "source": "Investing.com 한국어",
+   "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTE1Ed3pGR1lPTHZ0d1NkSi0wV29MR19MVXBzaXNkN1JmVjhQY1I5SDJEQmlSU2V1YWVkbHJkNmV6by0yWHdjVGFxN280aVhPcXBVdXB1NHBXVFNVMzFQNGVGVGdRcE9DMVNQZTRjbVdB?oc=5",
+   "date": "2026-11-02T10:18:00.000Z"
   },
   {
    "tag": "영국",
