@@ -91,7 +91,7 @@ for (const [name, symbol] of SYMBOLS) {
     history[symbol] = Object.entries(byDate)
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-MAX_DAYS)
-      .map(([d, v]) => [d, Math.round(v * 100) / 100]);
+      .map(([d, v]) => [d, Number(v.toPrecision(6))]); // 유효숫자 6자리 (0.8915 같은 환율도 살리기)
   } catch (e) {
     console.error('실패:', e.message); // 하나가 실패해도 나머지는 계속
   }
