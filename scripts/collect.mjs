@@ -117,3 +117,37 @@ try {
 } catch (e) {
   console.error('신용잔고 실패:', e.message); // 실패해도 지수 데이터는 그대로 저장된다
 }
+
+// ── 투자자별 순매수(억원): 네이버 증권 모바일 내부 주소 (비공식, 언제든 바뀔 수 있음) ──
+// 과거를 한 번에 주지 않으므로 날짜별로 하나씩 물어보고, 우리 쪽 data/flows.json에 직접 쌓는다
+try {
+  let flows = {};
+  try { flows = JSON.parse(await readFile('data/flows.json', 'utf8')); } catch {}
+  const num = s => Number(String(s).replace(/[,+]/g, '')); // '+6,028' → 6028
+
+  for (const market of ['KOSPI', 'KOSDAQ']) {
+    const byDate = Object.fromEntries((flows[market] || []).map(r => [r[0], r.slice(1)]));
+    const back = Object.keys(byDate).length < 20 ? 45 : 7;  // 처음엔 45일치 채우고, 그 뒤로는 최근 1주만
+    for (let i = 0; i < back; i++) {
+      const d = new Date(Date.now() + 9 * 3600 * 1000 - i * 24 * 3600 * 1000); // 한국 날짜 기준
+      const ymd = d.toISOString().slice(0, 10).replaceAll('-', '');
+      const res = await fetch(`https://m.stock.naver.com/api/index/${market}/trend?bizdate=${ymd}`,
+        { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!res.ok) throw new Error(`네이버 ${market} ${ymd}: HTTP ${res.status}`);
+      const t = await res.json();
+      const vals = [num(t.personalValue), num(t.foreignValue), num(t.institutionalValue)];
+      if (t.bizdate === ymd && vals.some(v => v !== 0)) {   // 휴장일(전부 0)은 건너뛰기
+        byDate[ymd.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')] = vals;
+      }
+      await new Promise(r => setTimeout(r, 200)); // 상대 서버에 부담 주지 않게 잠깐 쉬기
+    }
+    flows[market] = Object.entries(byDate)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-MAX_DAYS)
+      .map(([d, v]) => [d, ...v]);
+  }
+  await writeFile('data/flows.json', JSON.stringify(flows) + '\n');
+  console.log('수급', flows.KOSPI.length + '일치, 최근 코스피:', flows.KOSPI[flows.KOSPI.length - 1]);
+} catch (e) {
+  console.error('수급 실패:', e.message);
+}
