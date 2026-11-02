@@ -1,7 +1,8 @@
 // GitHub Actions가 30분마다 실행하는 수집 스크립트
 // 브라우저에서는 CORS 때문에 못 가져오는 Yahoo Finance 데이터를 대신 모아서
 // data/latest.json(최신값)과 data/history.json(날짜별 기록)으로 저장한다.
-// 금융투자협회 신용잔고·예탁금은 data/credit.json으로 저장한다.
+// 금융투자협회 신용잔고·예탁금은 data/credit.json, 네이버 수급은 data/flows.json,
+// 일본 국채는 history.json의 JGB10, Google 뉴스 제목은 data/news.json으로 저장한다.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
@@ -11,7 +12,17 @@ const SYMBOLS = [
   ['나스닥', '^IXIC'],
   ['코스피', '^KS11'],
   ['코스닥', '^KQ11'],
-  ['원/달러 (실시간)', 'KRW=X'],
+  ['원/달러', 'KRW=X'],
+  ['WTI', 'CL=F'],            // 미국 원유 선물
+  ['브렌트유', 'BZ=F'],        // 유럽 원유 선물
+  ['비트코인 (BTC)', 'BTC-KRW'],
+  ['이더리움 (ETH)', 'ETH-KRW'],
+  ['VIX 공포지수', '^VIX'],
+  ['미국 국채 10년물', '^TNX'],
+  ['달러/엔', 'JPY=X'],        // 1달러 = 몇 엔
+  ['달러/유로', 'EUR=X'],      // 1달러 = 몇 유로 (통화 상대강도용)
+  ['달러/파운드', 'GBP=X'],
+  ['달러/위안', 'CNY=X'],
 ];
 
 const MAX_DAYS = 400; // 종목마다 최근 400거래일(약 1년 반)만 보관
@@ -37,8 +48,11 @@ async function getQuote(name, symbol) {
     .map((t, i) => [toDate(t + offset), closes[i]])
     .filter(([, v]) => v != null);
 
-  const price = result.meta.regularMarketPrice;
+  const m = result.meta;
+  const price = m.regularMarketPrice;
   const prev = series[series.length - 2][1]; // 끝에서 두 번째 = 전일 종가
+  const now = Date.now() / 1000;
+  const reg = m.currentTradingPeriod?.regular;  // 오늘 정규장 시작·끝 시각
 
   return {
     quote: {
@@ -46,7 +60,10 @@ async function getQuote(name, symbol) {
       symbol,
       price,
       changePct: (price / prev - 1) * 100,
-      time: new Date(result.meta.regularMarketTime * 1000).toISOString(),
+      time: new Date(m.regularMarketTime * 1000).toISOString(),
+      high52: m.fiftyTwoWeekHigh,  // 52주 최고
+      low52: m.fiftyTwoWeekLow,
+      open: reg ? now >= reg.start && now < reg.end : null, // 지금 장이 열려 있나
     },
     series,
     today: toDate(result.meta.regularMarketTime + offset),
@@ -78,6 +95,31 @@ for (const [name, symbol] of SYMBOLS) {
   } catch (e) {
     console.error('실패:', e.message); // 하나가 실패해도 나머지는 계속
   }
+}
+
+// ── 일본 국채 10년물: 일본 재무성(MOF)이 매일 올리는 이번 달 금리표(CSV) ──
+// 한 줄 예: R8.10.30,1.659,...  (R8 = 레이와 8년 = 2026년, 11번째 칸이 10년물)
+try {
+  const res = await fetch('https://www.mof.go.jp/jgbs/reference/interest_rate/jgbcm.csv',
+    { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const rows = (await res.text()).split('\n')
+    .map(l => l.split(','))
+    .filter(c => /^R\d+\.\d+\.\d+$/.test(c[0]) && c[10])
+    .map(c => {
+      const [y, mo, d] = c[0].slice(1).split('.').map(Number);
+      return [`${2018 + y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`, Number(c[10])];
+    });
+  const byDate = Object.fromEntries(history.JGB10 || []);
+  for (const [d, v] of rows) byDate[d] = v;
+  const all = Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b)).slice(-MAX_DAYS);
+  history.JGB10 = all;
+  const [lastD, last] = all[all.length - 1];
+  const prev = all.length > 1 ? all[all.length - 2][1] : last;
+  quotes.push({ name: '일본 국채 10년물', symbol: 'JGB10', price: last, changePct: (last / prev - 1) * 100,
+                time: lastD + 'T15:00:00+09:00' });
+} catch (e) {
+  console.error('일본 국채 실패:', e.message);
 }
 
 const data = { updated: new Date().toISOString(), quotes };
@@ -150,4 +192,74 @@ try {
   console.log('수급', flows.KOSPI.length + '일치, 최근 코스피:', flows.KOSPI[flows.KOSPI.length - 1]);
 } catch (e) {
   console.error('수급 실패:', e.message);
+}
+
+// ── 카드 아래 뉴스: Google 뉴스 검색 RSS(최근 2일)에서 제목만 가져오기 ──
+// RSS = 사이트가 새 글 목록을 기계가 읽기 좋게 내놓는 XML 형식
+const NEWS = {
+  sp500: [['현황', 'S&P500 뉴욕증시 마감'], ['전망', 'S&P500 전망']],
+  nasdaq: [['현황', '나스닥 마감'], ['전망', '나스닥 전망']],
+  kospi: [['현황', '코스피 마감'], ['전망', '코스피 전망']],
+  kosdaq: [['현황', '코스닥 마감']],
+  wti: [['현황', '국제유가 WTI'], ['중동', '호르무즈 중동 유가']],
+  brent: [['현황', '브렌트유'], ['중동', '중동 정세 원유']],
+  btc: [['현황', '비트코인 시세'], ['전망', '비트코인 전망']],
+  eth: [['현황', '이더리움 시세'], ['전망', '이더리움 전망']],
+  krw: [['현황', '원달러 환율 마감'], ['현황', '환율 원화'], ['전망', '환율 전망']],
+  credit: [['', '신용융자 빚투'], ['', '투자자예탁금']],
+  flows: [['', '외국인 순매수 코스피'], ['', '기관 순매수 코스피']],
+};
+
+const unescape = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+  .replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+
+async function getNews(query, n) {
+  const url = 'https://news.google.com/rss/search?q=' + encodeURIComponent(query + ' when:2d')
+    + '&hl=ko&gl=KR&ceid=KR:ko';
+  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  if (!res.ok) throw new Error(`뉴스 "${query}": HTTP ${res.status}`);
+  const xml = await res.text();
+  return [...xml.matchAll(/<item>([\s\S]*?)<\/item>/g)].slice(0, n).map(([, it]) => {
+    const pick = tag => unescape((it.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`)) || [])[1] || '');
+    const source = pick('source');
+    // 제목 끝에 붙은 " - 언론사" 떼기
+    const title = pick('title').replace(new RegExp(' - ' + source.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'), '');
+    return { title, source, link: pick('link'), date: new Date(pick('pubDate')).toISOString() };
+  });
+}
+
+try {
+  const news = {};
+  const seen = new Set(); // 같은 기사가 여러 카드에 겹치지 않게
+  const take = async (q, n) => {
+    try {
+      const fresh = (await getNews(q, n + 3)).filter(a => !seen.has(a.title)).slice(0, n);
+      fresh.forEach(a => seen.add(a.title));
+      return fresh;
+    } catch (e) {
+      console.error(e.message); // 검색어 하나가 실패해도 나머지 뉴스는 계속
+      return [];
+    }
+  };
+
+  // 다음 일정 관련 뉴스: events.json에서 아직 안 지난 첫 일정의 제목으로 검색
+  const events = JSON.parse(await readFile('data/events.json', 'utf8'))
+    .filter(e => new Date(e.date) > new Date())
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+  if (events[0]) {
+    const q = events[0].title.replace(/\(.*?\)/g, '').trim();  // 괄호 설명은 빼고 검색
+    news.next = { title: events[0].title, items: await take(q, 3) };
+  }
+
+  for (const [key, list] of Object.entries(NEWS)) {
+    news[key] = [];
+    for (const [tag, q] of list) {
+      for (const a of await take(q, 1)) news[key].push({ tag, ...a });
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }
+  await writeFile('data/news.json', JSON.stringify({ updated: new Date().toISOString(), ...news }, null, 1) + '\n');
+  console.log('뉴스', Object.entries(news).map(([k, v]) => k + ':' + (v.items || v).length).join(' '));
+} catch (e) {
+  console.error('뉴스 실패:', e.message);
 }
