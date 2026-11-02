@@ -2,7 +2,9 @@
 // 브라우저에서는 CORS 때문에 못 가져오는 Yahoo Finance 데이터를 대신 모아서
 // data/latest.json(최신값)과 data/history.json(날짜별 기록)으로 저장한다.
 // 금융투자협회 신용잔고·예탁금은 data/credit.json, 네이버 수급은 data/flows.json,
-// 일본 국채는 history.json의 JGB10, Google 뉴스 제목은 data/news.json으로 저장한다.
+// 일본 국채는 history.json의 JGB10, Google 뉴스 제목은 data/news.json,
+// 기준금리(BIS)는 data/rates.json, 칼시 확률은 data/kalshi.json, CNN 공포탐욕은 data/fng.json,
+// S&P500 P/E·CAPE는 data/valuation.json으로 저장한다.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
@@ -194,6 +196,124 @@ try {
   console.error('수급 실패:', e.message);
 }
 
+// ── 주요국 기준금리: 국제결제은행(BIS) 정책금리 통계 (키 없이 CSV로 공개) ──
+// 나라 코드: KR 한국, US 미국, XM 유로존, JP 일본, AU 호주, GB 영국, CA 캐나다, CN 중국
+const BANKS = ['KR', 'US', 'XM', 'JP', 'AU', 'GB', 'CA', 'CN'];
+try {
+  const bis = async (freq, start) => {
+    const res = await fetch(`https://stats.bis.org/api/v1/data/WS_CBPOL/${freq}.${BANKS.join('+')}`
+      + `?startPeriod=${start}&format=csv&detail=dataonly`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) throw new Error(`BIS ${freq}: HTTP ${res.status}`);
+    // 한 줄 = FREQ,나라,날짜,값
+    return (await res.text()).trim().split('\n').slice(1)
+      .map(l => l.trim().split(',')).filter(c => c[3] !== '' && !isNaN(Number(c[3])))
+      .map(([, area, t, v]) => [area, t, Number(v)]);
+  };
+  const monthly = await bis('M', `${new Date().getUTCFullYear() - 5}-01`);   // 5년 그래프용 월별
+  const daily = await bis('D', new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10)); // 최근값용
+  const rates = {};
+  for (const b of BANKS) {
+    const last = daily.filter(r => r[0] === b).pop();
+    const m = monthly.filter(r => r[0] === b).map(r => [r[1], r[2]]);
+    rates[b] = { rate: last ? last[2] : m.at(-1)?.[1], asOf: last ? last[1] : m.at(-1)?.[0], src: 'BIS', monthly: m };
+  }
+  // BIS에 아직 안 들어간 최근 결정은 data/rates-manual.json에 적어 두면 덮어쓴다
+  const manual = JSON.parse(await readFile('data/rates-manual.json', 'utf8'));
+  for (const [b, o] of Object.entries(manual.override || {})) {
+    if (rates[b] && o.since > (rates[b].asOf || '')) Object.assign(rates[b], { rate: o.rate, asOf: o.since, src: o.src });
+  }
+  await writeFile('data/rates.json', JSON.stringify({ updated: new Date().toISOString(), rates }) + '\n');
+  console.log('기준금리', BANKS.map(b => `${b} ${rates[b].rate}(${rates[b].asOf})`).join(' '));
+} catch (e) {
+  console.error('기준금리 실패:', e.message);
+}
+
+// ── 칼시(Kalshi) 예측시장: 다음 금리 결정에 사람들이 돈을 건 확률 ──
+// 가격 0.71달러 = '그 결과가 나올 확률 71%'로 읽는다
+const KALSHI = {
+  US: 'KXFEDDECISION', KR: 'KXCBDECISIONKOREA', XM: 'KXCBDECISIONEU', JP: 'KXCBDECISIONJAPAN',
+  AU: 'KXCBDECISIONAUSTRALIA', GB: 'KXCBDECISIONENGLAND', CA: 'KXCBDECISIONCANADA',
+};
+function kLabel(s) {   // 'Hike 25bps' → '인상', 'Hike >25bps' → '인상 0.25%p 초과'
+  const big = />|more than/i.test(s) ? ' 0.25%p 초과' : '';
+  return /cut/i.test(s) ? '인하' + big : /hike/i.test(s) ? '인상' + big : '동결';
+}
+try {
+  const kalshi = {};
+  for (const [b, series] of Object.entries(KALSHI)) {
+    try {
+      const res = await fetch(`https://api.elections.kalshi.com/trade-api/v2/events?series_ticker=${series}`
+        + '&status=open&limit=10&with_nested_markets=true', { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const meetings = (await res.json()).events.map(e => {
+        const options = e.markets.map(m => {
+          const last = Number(m.last_price_dollars), bid = Number(m.yes_bid_dollars), ask = Number(m.yes_ask_dollars);
+          return { label: kLabel(m.yes_sub_title || ''), prob: Math.round((last || (bid + ask) / 2) * 100), volume: Number(m.volume_fp || 0) };
+        });
+        const volume = options.reduce((s, o) => s + o.volume, 0);
+        const top = [...options].sort((a, c) => c.prob - a.prob)[0];
+        return { ticker: e.event_ticker, close: e.markets[0].close_time, label: top.label, prob: top.prob,
+                 thin: volume < 5000, options: options.map(({ label, prob }) => ({ label, prob })) };
+      }).filter(m => m.options.some(o => o.prob > 0) && new Date(m.close) > new Date())  // 거래가 있고 아직 안 끝난 회의만
+        .sort((a, c) => new Date(a.close) - new Date(c.close));
+      kalshi[b] = { series, meetings: meetings.slice(0, 2) };
+    } catch (e) {
+      console.error(`칼시 ${b} 실패:`, e.message);
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  await writeFile('data/kalshi.json', JSON.stringify({ updated: new Date().toISOString(), kalshi }) + '\n');
+  console.log('칼시', Object.entries(kalshi).map(([b, k]) => `${b} ${k.meetings[0]?.label} ${k.meetings[0]?.prob}%`).join(' '));
+} catch (e) {
+  console.error('칼시 실패:', e.message);
+}
+
+// ── CNN 공포·탐욕 지수: CNN 웹페이지가 그래프를 그릴 때 쓰는 주소 (비공식) ──
+// 로봇처럼 보이면 거절(418)하므로 보통 브라우저처럼 머리말을 붙인다
+try {
+  const res = await fetch('https://production.dataviz.cnn.io/index/fearandgreed/graphdata', {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
+      'Accept': 'application/json, text/plain, */*', 'Referer': 'https://edition.cnn.com/', 'Origin': 'https://edition.cnn.com',
+    },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const j = await res.json();
+  const f = j.fear_and_greed, r1 = v => Math.round(v * 10) / 10;
+  await writeFile('data/fng.json', JSON.stringify({
+    updated: new Date().toISOString(), time: f.timestamp, score: r1(f.score), rating: f.rating,
+    prev: r1(f.previous_close), week: r1(f.previous_1_week), month: r1(f.previous_1_month), year: r1(f.previous_1_year),
+    history: j.fear_and_greed_historical.data.map(p => [new Date(p.x).toISOString().slice(0, 10), r1(p.y)]),
+  }) + '\n');
+  console.log('공포탐욕', r1(f.score), f.rating);
+} catch (e) {
+  console.error('공포탐욕 실패:', e.message);
+}
+
+// ── S&P500 밸류에이션: multpl.com 월별 표 (P/E, 경기조정 P/E = CAPE) ──
+async function multpl(path) {
+  const res = await fetch('https://www.multpl.com/' + path + '/table/by-month', { headers: { 'User-Agent': 'Mozilla/5.0' } });
+  if (!res.ok) throw new Error(`multpl ${path}: HTTP ${res.status}`);
+  // 표 한 줄 = <td>Oct 30, 2026</td><td> 40.13 </td>  (값 칸의 꾸밈 글자는 지우고 숫자만)
+  return [...(await res.text()).matchAll(/<tr[^>]*>\s*<td>([^<]+)<\/td>\s*<td>([\s\S]*?)<\/td>/g)]
+    .map(([, d, v]) => [new Date(d + ' UTC').toISOString().slice(0, 10), Number(v.replace(/<[^>]+>|&#?\w+;|[^\d.]/g, ''))])
+    .filter(([, v]) => v > 0);   // 최신이 앞
+}
+try {
+  const stat = rows => {
+    const [date, value] = rows[0];
+    const last25 = rows.slice(0, 300).map(r => r[1]);   // 최근 25년(300개월)
+    return { value, date, pct25: Math.round(last25.filter(v => v < value).length / last25.length * 100),
+             mean: Math.round(rows.reduce((s, r) => s + r[1], 0) / rows.length * 10) / 10 };
+  };
+  const pe = stat(await multpl('s-p-500-pe-ratio'));
+  const cape = stat(await multpl('shiller-pe'));
+  await writeFile('data/valuation.json', JSON.stringify({ updated: new Date().toISOString(), pe, cape }) + '\n');
+  console.log('밸류에이션 P/E', pe.value, 'CAPE', cape.value);
+} catch (e) {
+  console.error('밸류에이션 실패:', e.message);
+}
+
 // ── 카드 아래 뉴스: Google 뉴스 검색 RSS(최근 2일)에서 제목만 가져오기 ──
 // RSS = 사이트가 새 글 목록을 기계가 읽기 좋게 내놓는 XML 형식
 const NEWS = {
@@ -208,6 +328,9 @@ const NEWS = {
   krw: [['현황', '원달러 환율 마감'], ['현황', '환율 원화'], ['전망', '환율 전망']],
   credit: [['', '신용융자 빚투'], ['', '투자자예탁금']],
   flows: [['', '외국인 순매수 코스피'], ['', '기관 순매수 코스피']],
+  rates: [['한국', '한국은행 기준금리'], ['미국', '연준 금리'], ['유럽', 'ECB 금리'], ['일본', '일본은행 금리'],
+          ['영국', '영란은행 금리'], ['호주', '호주 중앙은행 금리'], ['캐나다', '캐나다 중앙은행 금리']],
+  fng: [['전망', '뉴욕증시 투자심리']],
 };
 
 const unescape = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
