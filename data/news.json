@@ -1,8 +1,27 @@
 {
- "updated": "2026-11-02T08:45:57.329Z",
- "next": {
-  "title": "미국 10월 고용보고서",
-  "items": [
+ "updated": "2026-11-02T09:27:21.842Z",
+ "events": {
+  "미국 중간선거 (상·하원)": [
+   {
+    "title": "미국 중간선거 앞두고 민주당 7%p 우세…트럼프 부정평가는 60%",
+    "source": "연합뉴스TV",
+    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFBLZEpnemtDbUpqUHVuczJOUVVHOVpCTlFFbXlyQU16ZzVuTVNtQTlCLVRrVDlyaGJ6U1hPMTJZNHlSNjhBWjhURkJ0aUp0WlV3YVppZHp5aTJOX3dYdXdTbm9mWVplbDg?oc=5",
+    "date": "2026-11-02T01:24:00.000Z"
+   },
+   {
+    "title": "미국 중간선거 : '민주당 기대감 높지만, 과거 여론조사 빗나간 전례도...' 선거 누가 이길까?",
+    "source": "BBC",
+    "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE1vOTdjUVZheHQ5RHIzUHhRMjhEdUlDUFlvS2V0QTlBeENLODNPYWg4VVhaVVQ5Y3BBMTN4TDRyWkhyTXJhR0dBdFJfOERRUkpFSlpHb1E3cEtZOXRyemfSAWNBVV95cUxPdEpuQ28yR09BY0Q2cHlscENHNXBBdWxUTUNKMXNBc1FmbGV1TzFLX2VhMzdCVDNETVFJbmV5ek9WTHR4ZG01ZE1Da0p3RDcxM0xYanV0N2hZeEpqeGw0QW5KWjg?oc=5",
+    "date": "2026-11-02T06:40:26.000Z"
+   },
+   {
+    "title": "\"미국 중간선거에서 민주당 하원 탈환 가능성 83%·상원 탈환 가능성은 63%\"",
+    "source": "YTN",
+    "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9wVzVkUVJUeDVNWG10SWRQS3lpa3BDYmE0dFgwcjdycmdPNUJKQ2R2UDdOdmxqaUtzOC03dFpZcWhfZ0IxTFMtYmtCZllYZzhBYXdKSjJiV0hXWXJpTUE?oc=5",
+    "date": "2026-11-01T21:09:00.000Z"
+   }
+  ],
+  "미국 10월 고용보고서": [
    {
     "title": "美 고용 회복 조짐에 연준 추가 금리 인상 가능성 부각",
     "source": "더구루",
