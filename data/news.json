@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-02T12:52:19.812Z",
+ "updated": "2026-11-02T14:05:11.172Z",
  "events": {
   "미국 중간선거 (상·하원)": [
    {
@@ -23,6 +23,12 @@
   ],
   "미국 10월 고용보고서": [
    {
+    "title": "Citi, 미국 10월 비농업 고용 6만5,000명 증가 전망",
+    "source": "Investing.com 한국어",
+    "link": "https://news.google.com/rss/articles/CBMid0FVX3lxTE9JOGdhTlJITTl4dmo4UVFXTUxsd1lVRVdnYm9rVi1RXy1pejBfVWYwMDZUTFJHN0Z1WDJ0elU0bHp2R1E5UGo4dmVnbGh2aWUxOGhnR2RmVWc0c2pvdlBXN0Y4eXYzRXg4LUdOc2F3ZGtxcHdENWdn?oc=5",
+    "date": "2026-11-02T13:40:00.000Z"
+   },
+   {
     "title": "美 고용 회복 조짐에 연준 추가 금리 인상 가능성 부각",
     "source": "더구루",
     "link": "https://news.google.com/rss/articles/CBMiY0FVX3lxTE1pZ3Y4ODJxaDVZa1BXY2ZyVUsxWTBnVDNKekxYZzdMZTI3alctU3M1S3hIOGIzYnRNNGtlVWtjWUlYajdNS3lCeTdQZ1F2Q05ZWDVtWllURVJKODY2eEhWVThrUQ?oc=5",
@@ -33,12 +39,6 @@
     "source": "비건뉴스",
     "link": "https://news.google.com/rss/articles/CBMiZkFVX3lxTFBobDdzVG1jZ0h5MGJfbDBvNm83MnRWemd6UU91SC13VVpUSXlfSDRlUHVVZ3B1T1hWVHpZSFRrSzFrcHBVcDgzUEJTN0xFMDdGVGpveVo4bGJUOFNFUGlKbkhnVFhCQQ?oc=5",
     "date": "2026-11-02T10:13:13.000Z"
-   },
-   {
-    "title": "[주간 뉴욕증시] 美중간선거·고용보고서 주목…애플·AMD 실적도 변수",
-    "source": "뉴시스",
-    "link": "https://news.google.com/rss/articles/CBMieEFVX3lxTE1IemlTZWtTRkkwSmVlRnhMTnFqOVlWMzBtczVpS1lheXVtak81TERMUXI2cXlaZlpGZ2NLQ0hkc0g2WVVBVnFjeHpLbTVDTEFESGRkaHhJYmkwczRKaDZCbXFkbU45eFd1czNJOGUwaXRKM2x2cFFodtIBeEFVX3lxTE1IemlTZWtTRkkwSmVlRnhMTnFqOVlWMzBtczVpS1lheXVtak81TERMUXI2cXlaZlpGZ2NLQ0hkc0g2WVVBVnFjeHpLbTVDTEFESGRkaHhJYmkwczRKaDZCbXFkbU45eFd1czNJOGUwaXRKM2x2cFFodg?oc=5",
-    "date": "2026-11-02T00:50:30.000Z"
    }
   ]
  },
@@ -68,19 +68,19 @@
   },
   {
    "tag": "전망",
-   "title": "미국 뉴욕증시 전망, 나스닥 선물 0.8% 상승…AI 기술주 반등·국제유가 급락에 주목",
-   "source": "톱스타뉴스",
-   "link": "https://news.google.com/rss/articles/CBMickFVX3lxTFBNdWc1Ul9Hd0RGaERrZG9rTC1mUFBsOFVRWGF5MXJiV3N3VXJRYW1UcGcwczQwM2Y4NGhjVEhFQW9WQWo4WHRmbUU4bVpLdGI2UThzMHFHOVp2VTBncksycWlGMm9Wd2U5SlhZVXhLLWNQdw?oc=5",
-   "date": "2026-11-02T11:48:07.000Z"
+   "title": "다우존스, 나스닥, S&P 500 주간 전망: 미국 중간선거와 실적 발표가 시장 시험대",
+   "source": "Investing.com 한국어",
+   "link": "https://news.google.com/rss/articles/CBMicEFVX3lxTFBtREIwQUV6N1VsT0tBeW54S2o1ajg0SzdoaGNzY05vQ3NZMHpIczN6N3pld0lsb29lY0dZZENUMEUwZ3JVM3BJR1hWZjhWRXFFQnN5UjBJUUk0Z2s2YkhBSzBVUU9aa3VYUFhTNm02V28?oc=5",
+   "date": "2026-11-02T13:45:00.000Z"
   }
  ],
  "kospi": [
   {
    "tag": "현황",
-   "title": "미 기술주 급락에도…코스피 2%대 상승 마감",
+   "title": "코스피, 2.24% 오른 5,859.08에 마감…코스닥, 1.38%↑",
    "source": "연합뉴스TV",
-   "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFBURUJkWU15RFl3aU9LVkp3MF9GSlUxNVdENmhmR09od0VzTzMxRkJzQUhHMjF6SDZ5R29VOU5CaEROdjlaeTRvckRaTHJONkVZRnpLVlljVHZvREZ4dFVrRmtZLV9wUDA?oc=5",
-   "date": "2026-11-02T09:35:00.000Z"
+   "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFAyZVJ4LTducGdpbUxPdUhSV3BqMHE2NlJ6MDNCUUpfOU1iZnBYM29lSThtNkwzZkwtcDNRNDlIMmJRQ0ZOVHRYYlBiT1JDTEo2bFQ3dXhPcmMtSU44VWxVRzh1X3FKQ00?oc=5",
+   "date": "2026-11-02T06:37:00.000Z"
   },
   {
    "tag": "전망",
@@ -93,10 +93,10 @@
  "kosdaq": [
   {
    "tag": "현황",
-   "title": "코스피, 2.24% 오른 5,859.08에 마감…코스닥, 1.38%↑",
-   "source": "연합뉴스TV",
-   "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTFAyZVJ4LTducGdpbUxPdUhSV3BqMHE2NlJ6MDNCUUpfOU1iZnBYM29lSThtNkwzZkwtcDNRNDlIMmJRQ0ZOVHRYYlBiT1JDTEo2bFQ3dXhPcmMtSU44VWxVRzh1X3FKQ00?oc=5",
-   "date": "2026-11-02T06:37:00.000Z"
+   "title": "[특징주] 영광, 코스닥 상장 첫날 26% 상승 마감(종합)",
+   "source": "연합뉴스",
+   "link": "https://news.google.com/rss/articles/CBMiW0FVX3lxTFBuSk5qTTM3RGJMaldTbDcxTERhT3pMX3lsNFljV2FXdVY4MURSeUJmVFdNSm5xb0wxMnIwZm5mdWpJQ1QyNkR0SGVMcmFBRmpIUDNGSDFnVl9kQXM?oc=5",
+   "date": "2026-11-02T06:44:42.000Z"
   }
  ],
  "wti": [
@@ -150,17 +150,17 @@
  "eth": [
   {
    "tag": "현황",
-   "title": "2026년, 2027년, 2028~2030년 및 향후 이더리움(ETH) 가격 전망·예측",
-   "source": "LiteFinance",
-   "link": "https://news.google.com/rss/articles/CBMikgFBVV95cUxNOTdZV2o4Q1BoZVBUY2R0eUJ0aFFfT292NW5xd3h6ZzR3S1pyNnVDYURDS1ozWW5NaDltVUtBX2UwWTVteC1RUFB6V2g3SWs5TWxTdkVGM1E2bjFlc21lbGw1UC1QNHdyWXRKMHhVUC1vaGQ3UVNrVnFJcFg4U01BRjFGVXlSanhLU0dJblloZVFpQQ?oc=5",
-   "date": "2026-11-01T10:22:18.000Z"
+   "title": "주요 암호화폐 3종 가격 전망: 비트코인, 이더리움, 리플 – 10월 하락 마감 후 11월 들어 BTC, ETH, XRP 반등",
+   "source": "www.tmgm.com",
+   "link": "https://news.google.com/rss/articles/CBMiiwJBVV95cUxNY3d0aTNvbVpINmdMbjZoNkdMdFVvR3E2ZDNLVG4teThHa05paEtxTGhnSzVLbXBtMS1wcU80Q2FLT0dPTzQwTm55VVllUUVVZXJKMWVHck8ya3BscEpUM0h4V1VnMGxob0lDR2FzWDJiNmJrSzQ2NWVWZURmbUhhRVpmYnJtNmdZWXZNNE1yRU9SWVdlMW03VTlEN3o2MFFJcHJWREp2YVB3Qm5rajJRSWM5dDBHTDVPY3V5QTJyY09laVhpMWx5TFp0ZFlvbEh3aFMtRDJUQlhlSkdPaWZfWGdrOEg5WC1SZU1jQlNzcE1qUUR1cnNJRUVka1BjQ01xd1U3aE1mMkFpMkU?oc=5",
+   "date": "2026-11-02T07:07:47.000Z"
   },
   {
    "tag": "전망",
-   "title": "美 비트코인 현물 ETF, 지난주 2억300만달러 순유출…이더리움도 자금 이탈",
+   "title": "비트마인, 이더리움 8573개 추가 매수…보유량 606만개 돌파",
    "source": "블루밍비트",
-   "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE5IajRKRnViX0N0aG42UEJsd0E1Sk15Y2Roa0pTS01WcEd2Q1NBWWNLbDBPUnQwQWtjMTl5VEdpdkhETnJJNGY2bnpfbTlZeU1p?oc=5",
-   "date": "2026-11-02T04:37:36.000Z"
+   "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE1lZnpSZWR5YVlEQW96RTBld3g3QWlfQVAzLU5qSlU5d1ZuMjdZUnJLMXRiZnlmMzdlMkZxT0JhR0RKa1NpUTFWZ1d2TXdpZkJK?oc=5",
+   "date": "2026-11-02T13:35:56.000Z"
   }
  ],
  "krw": [
@@ -272,10 +272,10 @@
  "fng": [
   {
    "tag": "전망",
-   "title": "美·이란 외교적 기대로 코스피 2% 넘게 반등…기관 1조 순매수 |",
-   "source": "연합인포맥스",
-   "link": "https://news.google.com/rss/articles/CBMidEFVX3lxTE4zd1JMNHZkbS1iVkdCaHNGR0VxQklzOGQxREI4ZV9PYll6VXE3UG0xeC1Bd2xMTDJDVmlSNnVXZ2t3SnBZU2FraE9Ua2JfWEo1dXNVdnBkT3Z4MHJSYU5MWXJfTnJ0RVI2WmVkd1hGaThIaS1K?oc=5",
-   "date": "2026-11-02T04:25:25.000Z"
+   "title": "뉴욕증시 프리뷰, 주가 선물 상승...AI 기술주 반등·유가 급락에 투자심리 회복",
+   "source": "뉴스핌",
+   "link": "https://news.google.com/rss/articles/CBMiXEFVX3lxTE9GWlI4NXQ3TVBWZjJ2MlJWNV9JbDRBR0lLVENkdzJsUGpRNnlqaWVUclN1Z09BMzhDcWd0NlpGQzlsRDNGR1d3djgtbUNpd0dEeTdXb2NHeVc4Tk9M?oc=5",
+   "date": "2026-11-02T13:12:00.000Z"
   }
  ]
 }
