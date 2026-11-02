@@ -57,6 +57,26 @@
     th { color: #888; font-weight: normal; }
     th:first-child, td:first-child { text-align: left; color: #888; }
     tr.sum td { border-top: 2px solid #333; font-weight: bold; }
+    .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .head h2 { margin-bottom: 0; }
+    .head .tabs button { margin: 0 0 0 6px; padding: 4px 10px; font-size: 12px; }
+    .wide { grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr)); }
+    .grid > .card { min-width: 0; }   /* 그래프가 카드 밖으로 삐져나가지 않게 */
+    .when { color: #777; font-size: 12px; }
+    .mini { position: relative; height: 110px; margin-top: 10px; }
+    .hilo { display: flex; justify-content: space-between; color: #888; font-size: 12px; margin-top: 4px; }
+    .news { margin-top: 10px; font-size: 13px; line-height: 1.5; }
+    .news a { color: #cfd6e4; text-decoration: none; }
+    .news a:hover { text-decoration: underline; }
+    .news .src { color: #666; font-size: 12px; }
+    .summary { border-left: 4px solid #6db3ff; line-height: 1.7; font-size: 15px; }
+    .carry { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid #222; }
+    .carry:first-child { border-top: none; }
+    .carry .v { font-size: 20px; font-weight: bold; text-align: right; white-space: nowrap; }
+    .badge { font-size: 11px; padding: 2px 6px; border-radius: 6px; margin-left: 6px; vertical-align: middle; }
+    .b-ok { background: #1d3326; color: #4dd4ac; }
+    .b-warn { background: #3a3116; color: #f0b429; }
+    .b-hit { background: #3d1c1c; color: #ff5a5a; }
   </style>
   <!-- 그래프 그리기 도구(Chart.js)를 공용 CDN에서 불러오기 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -66,26 +86,29 @@
     <h1>📊 My Market Calendar</h1>
     <div class="sub" id="time"></div>
 
+    <div class="card summary" id="summary">📊 지금 시장은 · 불러오는 중…</div>
+
     <h2>NEXT UP · 다가오는 일정</h2>
-    <div class="card next" id="next">불러오는 중…</div>
+    <div class="card next"><div id="next">불러오는 중…</div><div class="news" id="next-news"></div></div>
     <div class="card" id="events" style="margin-top: 12px;"></div>
     <div class="note">시각은 모두 한국시간 · 일정 목록: data/events.json</div>
 
-    <h2>주요 지수 · 실시간 환율</h2>
-    <div class="grid" id="quotes">불러오는 중…</div>
-    <div class="note" id="quotes-note">출처: Yahoo Finance · GitHub Actions가 30분마다 수집</div>
+    <!-- 지수·유가·코인 카드 묶음: 아래 GROUPS 설정대로 자바스크립트가 채운다 -->
+    <div id="groups"></div>
+    <div class="note" id="quotes-note">지수·유가=Yahoo Finance(GitHub Actions 수집·장중 ~15분 지연) · 암호화폐 가격=CoinGecko(실시간) · 전일대비=직전 거래일 종가 기준 · 상승 빨강▲ / 하락 파랑▼</div>
 
-    <h2>추이</h2>
-    <div class="card">
-      <div class="tabs" id="sym-tabs"></div>
-      <div class="tabs">
-        <button data-days="22">1개월</button>
-        <button data-days="66">3개월</button>
-        <button data-days="250" class="on">1년</button>
-      </div>
-      <div class="chart-box"><canvas id="chart"></canvas></div>
+    <div class="head"><h2>원/달러 환율</h2>
+      <div class="tabs" data-group="krw"><button data-range="30">30일</button><button data-range="250" class="on">1년</button></div>
     </div>
-    <div class="note" id="chart-note">출처: data/history.json (날짜별 종가 기록)</div>
+    <div class="grid wide" id="g-krw"></div>
+
+    <h2>주요 통화 상대강도 · 달러 대비 1년</h2>
+    <div class="card"><div class="chart-box"><canvas id="strength"></canvas></div></div>
+    <div class="note">1년 전을 0%로 놓고 · 위 = 달러 대비 강세, 아래 = 약세. 다른 통화가 다 오르는데 원화만 내리면 '달러 강세'가 아니라 원화만의 약세라는 뜻이에요. (Yahoo · GitHub Actions 수집)</div>
+
+    <h2>🇯🇵🇺🇸 엔캐리 청산 · 글로벌 금리 — 매크로 경계</h2>
+    <div class="card" id="carry">불러오는 중…</div>
+    <div class="note">엔캐리 3종(달러/엔·VIX·일본국채) 중 2개 이상 동시 발동이면 2024년 8월 폭락 재현 경계. 미국 10년물 4.6%↑는 나스닥·성장주 매수 경계(별도 신호). 일본 국채=일본 재무성(전 영업일 기준), 나머지=Yahoo.</div>
 
     <h2>신용융자잔고 · 투자자예탁금 (조원)</h2>
     <div class="grid" id="credit">불러오는 중…</div>
@@ -93,6 +116,7 @@
       <div class="chart-box"><canvas id="credit-chart"></canvas></div>
     </div>
     <div class="note" id="credit-note">출처: 금융투자협회 FreeSIS · 1~2영업일 늦게 발표</div>
+    <div class="news" id="n-credit"></div>
 
     <h2>투자자별 순매수 (억원)</h2>
     <div class="card">
@@ -103,147 +127,291 @@
       <div id="flows">불러오는 중…</div>
     </div>
     <div class="note">출처: 네이버 증권(비공식) · 당일 값은 장중 잠정치 · 빨강 순매수 / 파랑 순매도</div>
-
-    <h2>암호화폐</h2>
-    <div class="grid" id="coins">불러오는 중…</div>
-    <div class="note">출처: CoinGecko · 실시간 · 24시간 변동률</div>
-
-    <h2>환율</h2>
-    <div class="grid" id="fx">불러오는 중…</div>
-    <div class="note">출처: Frankfurter(유럽중앙은행 기준) · 하루 1번 갱신 · 전일 대비</div>
+    <div class="news" id="n-flows"></div>
+    <div class="note" id="news-note"></div>
 
     <button onclick="loadAll()">🔄 새로고침</button>
   </div>
 
   <script>
-    // ── 숫자를 보기 좋게 바꾸는 작은 도구들 ──
-    function won(n, digits = 0) {
-      return n.toLocaleString('ko-KR', { maximumFractionDigits: digits }) + '원';
-    }
+    // ── 등락률을 ▲ 빨강 / ▼ 파랑으로 ──
     function change(pct) {
       const cls = pct >= 0 ? 'up' : 'down';
       const arrow = pct >= 0 ? '▲' : '▼';
       return `<span class="${cls}">${arrow} ${Math.abs(pct).toFixed(2)}%</span>`;
     }
-    function card(name, price, pct) {
+
+    // ── 1. 지수·유가·코인 카드: data/latest.json(최신값) + history.json(기록) + news.json(뉴스) ──
+    // 묶음마다 [제목, 카드 목록]. 카드 = [Yahoo 코드, 뉴스 열쇠, 가격 모양]
+    const GROUPS = [
+      ['us', '미국 지수 · S&P500 · 나스닥', [['^GSPC', 'sp500', 'num'], ['^IXIC', 'nasdaq', 'num']]],
+      ['kr', '한국 지수 · 코스피 · 코스닥', [['^KS11', 'kospi', 'num'], ['^KQ11', 'kosdaq', 'num']]],
+      ['oil', '유가 · WTI · 브렌트', [['CL=F', 'wti', 'usd'], ['BZ=F', 'brent', 'usd']]],
+      ['coin', '암호화폐', [['BTC-KRW', 'btc', 'krw'], ['ETH-KRW', 'eth', 'krw']]],
+      ['krw', null, [['KRW=X', 'krw', 'won']]],   // 원/달러는 아래 따로 둔 칸에
+    ];
+    const range = { us: 30, kr: 30, oil: 30, coin: 30, krw: 250 }; // 묶음별 그래프 기간(거래일)
+    let latest = {}, hist = {}, news = {}, charts = {};
+
+    const FMT = {
+      num: v => v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      usd: v => '$' + v.toFixed(2),
+      krw: v => '₩' + Math.round(v).toLocaleString('ko-KR'),
+      won: v => v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '원',
+    };
+    const DT = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+    function stamp(iso) {   // '11/02 16:15'
+      const p = Object.fromEntries(DT.formatToParts(new Date(iso)).map(x => [x.type, x.value]));
+      return `${p.month}/${p.day} ${p.hour}:${p.minute}`;
+    }
+    function newsHtml(list) {
+      return (list || []).map(a =>
+        `<div>· ${a.tag ? `<span class="tag">${a.tag}</span>` : ''}<a href="${a.link}" target="_blank" rel="noopener">${a.title}</a> <span class="src">${a.source} ↗</span></div>`
+      ).join('');
+    }
+
+    function bigCard(sym, key, fmt) {
+      const q = latest[sym];
+      if (!q) return `<div class="card">${sym} 데이터 없음</div>`;
+      const off = (q.price / q.high52 - 1) * 100;
+      const closed = sym.startsWith('^') && q.open === false ? ' · 장 마감' : '';
       return `<div class="card">
-        <div class="name">${name}</div>
-        <div class="price">${price}</div>
-        ${change(pct)}
+        <div class="head"><span class="name">${q.name}</span><span class="when" id="t-${key}">${stamp(q.time)} 기준${closed}</span></div>
+        <div class="price" id="p-${key}">${FMT[fmt](q.price)}</div>
+        <span id="c-${key}">${change(q.changePct)}</span> <span class="note" id="d-${key}">전일대비</span>
+        <div class="note">52주 최고 대비 <span class="${off >= 0 ? 'up' : 'down'}">${off.toFixed(1)}%</span> · 52주 최고 ${FMT[fmt](q.high52)}</div>
+        <div class="mini"><canvas id="m-${key}"></canvas></div>
+        <div class="hilo" id="h-${key}"></div>
+        <div class="news">${newsHtml(news[key])}</div>
       </div>`;
     }
 
-    // ── 1. 코인 시세: CoinGecko API에서 받아오기 ──
-    async function loadCoins() {
-      const box = document.getElementById('coins');
-      try {
-        const url = 'https://api.coingecko.com/api/v3/simple/price'
-          + '?ids=bitcoin,ethereum&vs_currencies=krw&include_24hr_change=true';
-        const data = await (await fetch(url)).json();
-        box.innerHTML =
-          card('비트코인 (BTC)', won(data.bitcoin.krw), data.bitcoin.krw_24h_change) +
-          card('이더리움 (ETH)', won(data.ethereum.krw), data.ethereum.krw_24h_change);
-      } catch (e) {
-        box.textContent = '코인 시세를 불러오지 못했어요.';
-      }
-    }
-
-    // ── 2. 환율: 최근 열흘치를 받아 마지막 두 날짜를 비교 ──
-    async function loadFx() {
-      const box = document.getElementById('fx');
-      try {
-        const start = new Date(Date.now() - 10 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-        const url = `https://api.frankfurter.dev/v1/${start}..?base=USD&symbols=KRW,JPY,EUR`;
-        const data = await (await fetch(url)).json();
-        const days = Object.keys(data.rates).sort();
-        const today = data.rates[days[days.length - 1]];
-        const prev = data.rates[days[days.length - 2]];
-
-        // 1달러, 100엔, 1유로가 각각 몇 원인지 계산
-        const rows = [
-          ['미국 달러 (1 USD)', t => t.KRW],
-          ['일본 엔 (100 JPY)', t => t.KRW / t.JPY * 100],
-          ['유로 (1 EUR)', t => t.KRW / t.EUR],
-        ];
-        box.innerHTML = rows.map(([name, f]) =>
-          card(name, won(f(today), 2), (f(today) / f(prev) - 1) * 100)
-        ).join('');
-        document.querySelector('#fx + .note').textContent =
-          `출처: Frankfurter(유럽중앙은행 기준) · ${days[days.length - 1]} 기준 · 전일 대비`;
-      } catch (e) {
-        box.textContent = '환율을 불러오지 못했어요.';
-      }
-    }
-
-    // ── 3. 지수: GitHub Actions가 모아 둔 내 저장소의 data/latest.json 읽기 ──
-    async function loadQuotes() {
-      const box = document.getElementById('quotes');
-      try {
-        // ?t=... 는 브라우저가 예전 파일을 재사용(캐시)하지 않게 하는 꼬리표
-        const data = await (await fetch('data/latest.json?t=' + Date.now())).json();
-        box.innerHTML = data.quotes.map(q =>
-          card(q.name, q.price.toLocaleString('ko-KR', { maximumFractionDigits: 2 }), q.changePct)
-        ).join('');
-        document.getElementById('quotes-note').textContent =
-          '출처: Yahoo Finance · GitHub Actions 수집 · 마지막 수집 '
-          + new Date(data.updated).toLocaleString('ko-KR');
-      } catch (e) {
-        box.textContent = '지수 데이터를 불러오지 못했어요.';
-      }
-    }
-
-    // ── 4. 추이 그래프: data/history.json의 날짜별 기록으로 선 그래프 그리기 ──
-    const NAMES = { '^GSPC': 'S&P 500', '^IXIC': '나스닥', '^KS11': '코스피', '^KQ11': '코스닥', 'KRW=X': '원/달러' };
-    let hist = {}, sym = '^KS11', days = 250, chart;
-
-    function drawChart() {
-      const rows = (hist[sym] || []).slice(-days);   // 최근 N거래일만
-      const up = rows.length > 1 && rows[rows.length - 1][1] >= rows[0][1];
-      const color = up ? '#ff5a5a' : '#4d8dff';         // 기간 중 올랐으면 빨강, 내렸으면 파랑
-      if (chart) chart.destroy();                       // 예전 그래프 지우고 새로 그리기
-      chart = new Chart(document.getElementById('chart'), {
+    function drawMini(sym, key, fmt, days) {
+      const rows = (hist[sym] || []).slice(-days);
+      if (!rows.length) return;
+      const vals = rows.map(r => r[1]);
+      const up = vals[vals.length - 1] >= vals[0];
+      const color = up ? '#ff5a5a' : '#4d8dff';
+      if (charts[key]) charts[key].destroy();
+      charts[key] = new Chart(document.getElementById('m-' + key), {
         type: 'line',
-        data: {
-          labels: rows.map(r => r[0]),
-          datasets: [{ data: rows.map(r => r[1]), borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.2 }],
-        },
+        // 날짜 글자를 짧게: 30일은 '10-23', 1년은 '25-11'
+        data: { labels: rows.map(r => days >= 250 ? r[0].slice(2, 7) : r[0].slice(5)), datasets: [{ data: vals, borderColor: color, borderWidth: 1.5, pointRadius: 0, tension: 0.2, fill: true, backgroundColor: color + '22' }] },
         options: {
           maintainAspectRatio: false,
           plugins: { legend: { display: false } },
-          interaction: { mode: 'index', intersect: false }, // 마우스를 올리면 그 날짜 값 표시
+          interaction: { mode: 'index', intersect: false },
           scales: {
-            x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
-            y: { ticks: { color: '#777' }, grid: { color: '#222' } },
+            x: { ticks: { color: '#666', maxTicksLimit: 4, font: { size: 10 } }, grid: { display: false } },
+            y: { position: 'right', ticks: { color: '#666', maxTicksLimit: 3, font: { size: 10 } }, grid: { color: '#1e2129' } },
           },
         },
       });
-      document.getElementById('chart-note').textContent =
-        `출처: data/history.json · ${NAMES[sym]} ${rows.length}거래일 (${rows[0]?.[0]} ~ ${rows[rows.length - 1]?.[0]})`;
+      document.getElementById('h-' + key).innerHTML =
+        `<span>${days >= 250 ? '1년' : days + '거래일'} 최고 ${FMT[fmt](Math.max(...vals))}</span><span>최저 ${FMT[fmt](Math.min(...vals))}</span>`;
     }
 
-    async function loadHistory() {
+    function drawGroup(id) {
+      const [, , cards] = GROUPS.find(g => g[0] === id);
+      for (const [sym, key, fmt] of cards) drawMini(sym, key, fmt, range[id]);
+    }
+
+    function renderGroups() {
+      document.getElementById('groups').innerHTML = GROUPS.filter(g => g[1]).map(([id, title, cards]) => `
+        <div class="head"><h2>${title}</h2>
+          <div class="tabs" data-group="${id}"><button data-range="30" class="on">30일</button><button data-range="250">1년</button></div>
+        </div>
+        <div class="grid wide">${cards.map(c => bigCard(...c)).join('')}</div>`).join('');
+      document.getElementById('g-krw').innerHTML = bigCard('KRW=X', 'krw', 'won');
+      // 원/달러는 '원' 단위 변화도 함께
+      const k = latest['KRW=X'];
+      if (k) {
+        const diff = k.price - k.price / (1 + k.changePct / 100);
+        document.getElementById('c-krw').innerHTML =
+          `<span class="${diff >= 0 ? 'up' : 'down'}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(2)}원 (${diff >= 0 ? '+' : ''}${k.changePct.toFixed(2)}%)</span>`;
+      }
+      GROUPS.forEach(g => drawGroup(g[0]));
+      loadCoins();   // 코인 가격은 실시간 값으로 덮어쓰기
+    }
+
+    // ── 2. 코인 실시간 가격: CoinGecko (브라우저가 직접, 1분마다) ──
+    async function loadCoins() {
       try {
-        hist = await (await fetch('data/history.json?t=' + Date.now())).json();
-        // 종목 버튼 만들기
-        document.getElementById('sym-tabs').innerHTML = Object.keys(NAMES).map(s =>
-          `<button data-sym="${s}" class="${s === sym ? 'on' : ''}">${NAMES[s]}</button>`
-        ).join('');
-        drawChart();
+        const url = 'https://api.coingecko.com/api/v3/simple/price'
+          + '?ids=bitcoin,ethereum&vs_currencies=krw&include_24hr_change=true&include_last_updated_at=true';
+        const data = await (await fetch(url)).json();
+        for (const [id, key] of [['bitcoin', 'btc'], ['ethereum', 'eth']]) {
+          const c = data[id], p = document.getElementById('p-' + key);
+          if (!c || !p) continue;
+          p.textContent = FMT.krw(c.krw);
+          document.getElementById('c-' + key).innerHTML = change(c.krw_24h_change);
+          document.getElementById('t-' + key).textContent = stamp(c.last_updated_at * 1000) + ' 기준 · 실시간';
+          document.getElementById('d-' + key).textContent = '24시간 대비';
+        }
       } catch (e) {
-        document.getElementById('chart-note').textContent = '추이 기록을 불러오지 못했어요.';
+        console.log('코인 실시간 실패, 수집된 값 그대로 표시');
       }
     }
 
-    // 버튼 누르면: 같은 줄의 버튼 색을 바꾸고 그래프 다시 그리기
+    // ── 3. 주요 통화 상대강도: 1년 전 대비 각 통화가 달러에 비해 얼마나 강해졌나 ──
+    function renderStrength() {
+      const CUR = [['KRW=X', '원화', '#f0b429', 3], ['JPY=X', '엔', '#ff7a90', 1.5], ['EUR=X', '유로', '#6db3ff', 1.5],
+                   ['GBP=X', '파운드', '#4dd4ac', 1.5], ['CNY=X', '위안', '#b48cff', 1.5]];
+      const dates = (hist['KRW=X'] || []).slice(-250).map(r => r[0]);
+      if (!dates.length) return;
+      const datasets = CUR.map(([sym, name, color, width]) => {
+        const map = Object.fromEntries(hist[sym] || []);
+        let last = null, base = null;
+        const data = dates.map(d => {
+          if (map[d] != null) last = map[d];      // 휴일이면 직전 값 그대로
+          if (last == null) return null;
+          if (base == null) base = last;
+          // 1달러 = x 원 → x가 줄면 원화 강세. 그래서 base / 지금 - 1
+          return Math.round((base / last - 1) * 1000) / 10;
+        });
+        const end = data[data.length - 1];
+        return { label: `${name} ${end >= 0 ? '+' : ''}${end}%`, data, borderColor: color, borderWidth: width, pointRadius: 0, tension: 0.2 };
+      });
+      if (charts.strength) charts.strength.destroy();
+      charts.strength = new Chart(document.getElementById('strength'), {
+        type: 'line',
+        data: { labels: dates, datasets },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#aaa', boxWidth: 12 } } },
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
+            y: { ticks: { color: '#777', callback: v => v + '%' }, grid: { color: c => c.tick.value === 0 ? '#555' : '#222' } },
+          },
+        },
+      });
+    }
+
+    // ── 4. 엔캐리 청산 경보: 값이 정해 둔 선을 넘으면 '주의'·'발동' ──
+    const CARRY = [
+      { sym: 'JPY=X', name: 'USD/JPY (달러/엔)', desc: '엔화 강세 = 캐리 청산 신호 · 143 이하 주의 (2024 저점 141.7)', fmt: v => v.toFixed(1),
+        level: v => v <= 141.7 ? 2 : v <= 143 ? 1 : 0, carry: true },
+      { sym: '^VIX', name: 'VIX 공포지수', desc: '25↑ 주의 / 30↑ 청산 가속 (2024년 66 터치)', fmt: v => v.toFixed(1),
+        level: v => v >= 30 ? 2 : v >= 25 ? 1 : 0, carry: true },
+      { sym: 'JGB10', name: '일본 국채 10년물', desc: '2.8% 돌파 주의 / 3%대 = 미국채 매도 가속', fmt: v => v.toFixed(2) + '%',
+        level: v => v >= 3 ? 2 : v >= 2.8 ? 1 : 0, carry: true },
+      { sym: '^TNX', name: '미국 국채 10년물', desc: '4.6% 돌파 = 금리 상승추세 → 나스닥·성장주 매수 경계', fmt: v => v.toFixed(2) + '%',
+        level: v => v >= 4.6 ? 2 : 0 },
+    ];
+    const BADGE = [['정상', 'b-ok'], ['주의', 'b-warn'], ['⚠ 발동', 'b-hit']];
+
+    function carryLevels() {
+      return CARRY.map(c => latest[c.sym] ? c.level(latest[c.sym].price) : null);
+    }
+    function renderCarry() {
+      const lv = carryLevels();
+      const hits = CARRY.filter((c, i) => c.carry && lv[i] === 2).length;
+      document.getElementById('carry').innerHTML = CARRY.map((c, i) => {
+        const q = latest[c.sym];
+        if (!q) return `<div class="carry"><div>${c.name}</div><div class="v">–</div></div>`;
+        const [label, cls] = BADGE[lv[i]];
+        return `<div class="carry">
+          <div><div>${c.name}</div><div class="note" style="margin-top: 2px">${c.desc}</div></div>
+          <div class="v">${c.fmt(q.price)}<span class="badge ${cls}">${label}</span>
+            <div class="when">${stamp(q.time)} · ${change(q.changePct)}</div></div>
+        </div>`;
+      }).join('') + `<div class="carry"><div class="${hits >= 2 ? 'up' : ''}">${hits >= 2 ? '⚠ 엔캐리 청산 경계' : '● 엔캐리 3종 평온'} — 발동 ${hits}개 (미국 10년물은 별도 신호)</div></div>`;
+    }
+
+    // ── 5. '지금 시장은' 요약: AI가 아니라 정해 둔 규칙으로 문장을 엮는다 ──
+    const WD = new Intl.DateTimeFormat('ko-KR', { timeZone: 'America/New_York', weekday: 'short' });
+    const KWD = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', weekday: 'short' });
+    const KDAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }); // '2026-11-02'
+    function pct(v) { return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
+    // 두 지수가 같은 방향이면 평균 크기로 '크게/소폭', 방향이 다르면 '엇갈림'
+    function move(a, b) {
+      if ((a >= 0) !== (b >= 0)) return 'mix';
+      const m = Math.abs(a + b) / 2;
+      return (m >= 1.5 ? '크게 ' : m < 0.3 ? '소폭 ' : '') + (a >= 0 ? 'up' : 'down');
+    }
+    function renderSummary() {
+      const g = latest['^GSPC'], n = latest['^IXIC'], k = latest['^KS11'], q = latest['^KQ11'];
+      if (!g || !k) return;
+      const s = [];
+
+      // 미국: 장중이면 '지금', 하루 안에 끝났으면 '어젯밤', 그보다 오래면 '지난 ○요일 밤'
+      const usWhen = g.open ? '지금' : (Date.now() - new Date(g.time)) < 24 * 3600e3 ? '어젯밤'
+        : `지난 ${WD.format(new Date(g.time))}요일 밤`;
+      const um = move(g.changePct, n.changePct);
+      const usVerb = um === 'mix' ? '엇갈렸습니다' : um.replace('up', '올랐습니다').replace('down', '내렸습니다');
+      s.push(`${usWhen} 미국 증시는 S&P500 ${pct(g.changePct)}, 나스닥 ${pct(n.changePct)}로 ${g.open ? usVerb.replace('올랐습니다', '오르고 있습니다').replace('내렸습니다', '내리고 있습니다').replace('엇갈렸습니다', '엇갈리고 있습니다') : usVerb}.`);
+
+      // 한국: 장중 / 오늘 마감 / 지난 ○요일 마감
+      const today = KDAY.format(new Date());
+      const krToday = KDAY.format(new Date(k.time)) === today;
+      const km = move(k.changePct, q.changePct);
+      const krWord = km === 'mix' ? '엇갈린' : km.replace('up', '오른').replace('down', '내린');
+      const krLive = km === 'mix' ? '엇갈리고 있습니다' : km.replace('up', '오르고 있습니다').replace('down', '내리고 있습니다');
+      s.push(k.open ? `오늘 한국 증시는 장중 코스피 ${pct(k.changePct)}, 코스닥 ${pct(q.changePct)}로 ${krLive}.`
+        : `${krToday ? '오늘' : `지난 ${KWD.format(new Date(k.time))}요일`} 한국 증시는 코스피 ${pct(k.changePct)}, 코스닥 ${pct(q.changePct)}로 ${krWord} 채 마감했습니다.`);
+
+      // 유가가 3% 이상 크게 움직였으면 한 줄
+      const w = latest['CL=F'];
+      if (w && Math.abs(w.changePct) >= 3)
+        s.push(`국제유가(WTI)는 $${w.price.toFixed(2)}로 ${Math.abs(w.changePct).toFixed(1)}% ${w.changePct > 0 ? '급등' : '급락'}했습니다.`);
+
+      // 금리·엔캐리 경보
+      const t = latest['^TNX'], lv = carryLevels();
+      const hits = CARRY.filter((c, i) => c.carry && lv[i] === 2).length;
+      if (hits >= 2) s.push(`엔캐리 청산 신호가 ${hits}개 동시에 켜져 있어 경계가 필요합니다.`);
+      if (t && t.price >= 4.6) s.push(`미국 10년물 국채금리는 ${t.price.toFixed(2)}%로 경계선(4.6%) 위에 있습니다.`);
+
+      // 다음 큰 일정
+      const next = events.find(e => e.at > Date.now());
+      if (next) {
+        const d = new Date(next.at);
+        const [, mo, dd] = KDAY.format(d).split('-').map(Number);
+        s.push(`다음 큰 일정은 ${mo}/${dd}(${KWD.format(d)}) ${next.title}입니다.`);
+      }
+      document.getElementById('summary').innerHTML =
+        `<div class="name">📊 지금 시장은 · ${stamp(new Date().toISOString())} 기준</div><div style="margin-top: 6px">${s.join(' ')}</div>`;
+    }
+
+    async function loadMarket() {
+      try {
+        const [l, h, nw] = await Promise.all(['latest', 'history', 'news'].map(f =>
+          fetch(`data/${f}.json?t=` + Date.now()).then(r => r.ok ? r.json() : {})));
+        latest = Object.fromEntries((l.quotes || []).map(q => [q.symbol, q]));
+        hist = h; news = nw;
+        renderGroups();
+        renderStrength();
+        renderCarry();
+        renderSummary();
+        renderNews();
+        document.getElementById('news-note').textContent = nw.updated
+          ? `카드 아래 뉴스 = Google 뉴스 헤드라인(최근 2일, 자동 수집 ${stamp(nw.updated)}) · 지수 마지막 수집 ${stamp(l.updated)}` : '';
+      } catch (e) {
+        document.getElementById('groups').textContent = '지수 데이터를 불러오지 못했어요.';
+        console.error(e);
+      }
+    }
+
+    function renderNews() {
+      document.getElementById('n-credit').innerHTML = newsHtml(news.credit);
+      document.getElementById('n-flows').innerHTML = newsHtml(news.flows);
+      const next = events.find(e => e.at > Date.now());
+      document.getElementById('next-news').innerHTML = news.next && next && news.next.title === next.title
+        ? '<div class="note">발표 전 · 관련 뉴스</div>' + newsHtml(news.next.items) : '';
+    }
+
+    // 버튼 누르면: 같은 줄의 버튼 색을 바꾸고, 그 버튼이 맡은 일 하기
     document.addEventListener('click', e => {
       const b = e.target.closest('.tabs button');
       if (!b) return;
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('on'));
       b.classList.add('on');
       if (b.dataset.mkt) { mkt = b.dataset.mkt; drawFlows(); return; }
-      if (b.dataset.sym) sym = b.dataset.sym;
-      if (b.dataset.days) days = +b.dataset.days;
-      drawChart();
+      if (b.dataset.range) {
+        const id = b.parentElement.dataset.group;
+        range[id] = +b.dataset.range;
+        drawGroup(id);
+      }
     });
 
     // ── 7. 투자자별 순매수: data/flows.json (시장별 [날짜, 개인, 외국인, 기관]) ──
@@ -310,6 +478,8 @@
         events = list.map(e => ({ ...e, at: new Date(e.date).getTime() }))
                      .sort((a, b) => a.at - b.at);       // 날짜순 정렬
         tick();
+        renderSummary();   // 요약 문장의 '다음 큰 일정'과 일정 뉴스도 다시
+        renderNews();
       } catch (e) {
         document.getElementById('next').textContent = '일정을 불러오지 못했어요.';
       }
@@ -365,12 +535,9 @@
       document.getElementById('time').textContent =
         '업데이트: ' + new Date().toLocaleString('ko-KR');
       loadEvents();
-      loadQuotes();
-      loadHistory();
+      loadMarket();
       loadCredit();
       loadFlows();
-      loadCoins();
-      loadFx();
     }
 
     loadAll();
