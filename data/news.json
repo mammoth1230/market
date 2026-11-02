@@ -1,5 +1,5 @@
 {
- "updated": "2026-11-02T22:10:32.710Z",
+ "updated": "2026-11-02T23:09:27.143Z",
  "events": {
   "미국 중간선거 (상·하원)": [
    {
@@ -9,10 +9,10 @@
     "date": "2026-11-02T19:02:00.000Z"
    },
    {
-    "title": "[뉴스프라임] 미국 중간선거 D-1…의회 주도권 누가 쥘까",
-    "source": "연합뉴스TV",
-    "link": "https://news.google.com/rss/articles/CBMiZ0FVX3lxTE9zcnd6Vnp1UEl6Y2FwWTB6bG9DVFZGbjN1R2NZb0ZWNFJyRzV2QjN5a1c5Z01mQjFSRmQ4NVVNZENseUg3Tk5oblpNUnRyTEc5MVNPSHFtWVVlQUJpM3hhY3BYc3EyT2s?oc=5",
-    "date": "2026-11-02T10:59:00.000Z"
+    "title": "오늘 미국 중간선거…민주, 상·하원 장악 가능성 주목",
+    "source": "JTBC",
+    "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTFA3My1LeDl1SlZwOTdmbHQxMlFXdEk4cDRYS2I5ZXdDN1E1bTFMcXNmVi1ha1dmNGFsUzVKdzBxd3lEM2g1VDJURlZUbXpxQ2YzdURaRA?oc=5",
+    "date": "2026-11-02T22:41:00.000Z"
    },
    {
     "title": "미국 중간선거 앞두고 미국과 이란 외교적 교착 상태",
@@ -109,10 +109,10 @@
   },
   {
    "tag": "중동",
-   "title": "[국제유가] 호르무즈 유조선 피격에 급등…브렌트유 6개월 만에 최고",
-   "source": "굿모닝경제",
-   "link": "https://news.google.com/rss/articles/CBMibEFVX3lxTFBkSENzZDNqVVZlS1JOY2t3SnpzakNrMTVZUzJSQUNBVmwtVjVNZFlpd1Atd2ppVmh4TDdBalhTVFAydXhtVzR0bi1kcUYtSlJBc1hLNGpYcW53ZGVacUxNS1pCbE9KUHFIOV80Vw?oc=5",
-   "date": "2026-11-02T00:49:47.000Z"
+   "title": "117달러까지 치솟았던 국제유가, 하루 새 7% 뚝...미·이란 대화 물꼬",
+   "source": "매일경제",
+   "link": "https://news.google.com/rss/articles/CBMiRkFVX3lxTE1CQXVNM01SN043ME5SRnZwNXFuN21CV0laTUpoODFadnBJYk5YNk9ZQnRzcnZaRmRqQnowQ3lrMUFraExZVEE?oc=5",
+   "date": "2026-11-02T21:17:23.000Z"
   }
  ],
  "brent": [
@@ -141,10 +141,10 @@
   },
   {
    "tag": "전망",
-   "title": "\"바이낸스 비트코인 잔액 4일 연속 감소…해킹 전보다 2만3200 BTC↓\"",
-   "source": "블루밍비트",
-   "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE4xMVZkVWxzWnVXT3Z1SENZcnpRelpBaVBkRmtFWExtOWxZb1MyaHVBU1VtX2JVdk5xLVZDS3BpdEstaC1vSWRPb0pPUEJ3UlVY?oc=5",
-   "date": "2026-11-02T08:03:10.000Z"
+   "title": "비트코인 가격 전망: ETF 자금 유출 속 BTC 78,000달러 아래로 하락",
+   "source": "www.tmgm.com",
+   "link": "https://news.google.com/rss/articles/CBMiyAFBVV95cUxQSUZoRnNaRm5nUjNoZEZ2Ym1DYU1oUHMzQWFvaU9KYWtodW5pMF8zbndXb3ZJR05tV3VIRHhKVmNNT2ZpeFlUR3RScUFENHE0Z1dPV0RaSERKNmdzdEdXaEg2OEs4Z1VoQUFJbDlOcUlia1FqanlOTWFpY2wzSjZtOXc4bHVfcld3LWkyVFU5X1BGeExOd29VLThKaTF5ZDZWYVF5ekN0X0RhQ3FBc19QQ0dKX0NDalN1RE9ieFJLTnNUcG5ZeTFaZQ?oc=5",
+   "date": "2026-11-02T13:12:29.000Z"
   }
  ],
  "eth": [
@@ -157,10 +157,10 @@
   },
   {
    "tag": "전망",
-   "title": "비트마인, 이더리움 8573개 추가 매수…보유량 606만개 돌파",
-   "source": "블루밍비트",
-   "link": "https://news.google.com/rss/articles/CBMiUEFVX3lxTE1lZnpSZWR5YVlEQW96RTBld3g3QWlfQVAzLU5qSlU5d1ZuMjdZUnJLMXRiZnlmMzdlMkZxT0JhR0RKa1NpUTFWZ1d2TXdpZkJK?oc=5",
-   "date": "2026-11-02T13:35:56.000Z"
+   "title": "모건 스탠리, 코인베이스(COIN) 실적 전망 부진에 따라 투자의견 하향 및 목표주가 53% 하향 조정",
+   "source": "CoinDesk",
+   "link": "https://news.google.com/rss/articles/CBMiygFBVV95cUxNOFBDMnhJUzZjZzdudFdTOHlHUjJRUjVra2x1Ry1lQzVKb2h3RG82M2hjS2w1SjRVRG52UFpuZV9yVTl6ejkyX0NTN3p0SWNqNzBaTjFTVlMzX09aSFlTWXlqNmFMdXBzYkhhMGZDMG1ZTF9DTV9vM1BmVjJZQ0U2N2wyLXhIZWNGZEsyMDdtcFZfOFpTaHVXa3EzUk5JY0Z3QkpsRUhEZFdaUnk1dVhwb3IyUnVaV1BnUUNLR3FHRVYwdzdpZVZtaHlR?oc=5",
+   "date": "2026-11-02T14:29:33.000Z"
   }
  ],
  "krw": [
@@ -196,10 +196,10 @@
   },
   {
    "tag": "",
-   "title": "개미 실탄 한 달 새 16조 증발…코스피 ‘투매 악순환’ 경계[시험대 선 증시]",
-   "source": "이투데이",
-   "link": "https://news.google.com/rss/articles/CBMiVEFVX3lxTE1uOVdGYkQyamxKd2VKakRTY1Nkd0dLR0JWUXFOZnNHc1EyWTJubnlOSWtfZWFmSDY0TXQtT0xhS0k2azl5eDlLTnFRX0YtRWFaaFRsdA?oc=5",
-   "date": "2026-11-02T21:00:00.000Z"
+   "title": "주식 판 돈, 이젠 하루 만에 받는다",
+   "source": "Chosunbiz",
+   "link": "https://news.google.com/rss/articles/CBMiiAFBVV95cUxPZk5paVpQaDhYejRMWlA0QUNQSFI3dmtEMmU2QTNSQTA5Ti1hTkQ2RXI5TTNPRW1scGZTRFhMa2JuWVVaTXNqejVjUGtkVzZVaDVENGxlLW1uYkhPMEtWcXR1QzFBYzc5TnNzWGF1dkxPWGl1VDlPaVY2d1NzcmxjWEV2eTVJdXBH0gGcAUFVX3lxTE1WbGRTcWNOeTdTTkRmZ1h0QUdwX28ydGhTWHRoekZoWlFpNXdXaUwyTDRtMlRheU1Ta1pkcC1xeWtuWHVWeGE5UzFLRVJ2cnlnOVRMbU9mNGRJMVNiQmRCcnNXbV9VeFg5ak5mMUh6dVQwYklEU0hCMTlIejlOa2NkLWdGWnlZaVJuU3BfVzN3OGZDaHA4ckdJVnkzbg?oc=5",
+   "date": "2026-11-02T15:32:00.000Z"
   }
  ],
  "flows": [
@@ -242,10 +242,10 @@
   },
   {
    "tag": "일본",
-   "title": "UBS “일본 실질금리 마이너스 지속, 달러/엔 지지 요인”",
-   "source": "Investing.com 한국어",
-   "link": "https://news.google.com/rss/articles/CBMibkFVX3lxTE1Ed3pGR1lPTHZ0d1NkSi0wV29MR19MVXBzaXNkN1JmVjhQY1I5SDJEQmlSU2V1YWVkbHJkNmV6by0yWHdjVGFxN280aVhPcXBVdXB1NHBXVFNVMzFQNGVGVGdRcE9DMVNQZTRjbVdB?oc=5",
-   "date": "2026-11-02T10:18:00.000Z"
+   "title": "\"일본은행, 연말 추가 금리인상 전망…엔화 강세는 제한적\"",
+   "source": "뉴스투데이",
+   "link": "https://news.google.com/rss/articles/CBMiXkFVX3lxTE9vWkZpa0hmNi1XZ1RFQnpYcTZYU29fSXZ0RUxDNEVZX1JmZldpa3h4eE1DSXdwXzdHUE9ZVjJiOEpmTjh6VFAwWTVyZDRMcEFGRWZiM3JnQ1F6cnBCWUE?oc=5",
+   "date": "2026-11-02T00:41:00.000Z"
   },
   {
    "tag": "영국",
