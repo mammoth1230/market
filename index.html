@@ -52,6 +52,11 @@
     .ev { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid #222; font-size: 14px; }
     .ev .when { color: #888; white-space: nowrap; }
     .tag { font-size: 11px; color: #f0b429; margin-right: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { padding: 7px 4px; text-align: right; border-top: 1px solid #222; }
+    th { color: #888; font-weight: normal; }
+    th:first-child, td:first-child { text-align: left; color: #888; }
+    tr.sum td { border-top: 2px solid #333; font-weight: bold; }
   </style>
   <!-- 그래프 그리기 도구(Chart.js)를 공용 CDN에서 불러오기 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -88,6 +93,16 @@
       <div class="chart-box"><canvas id="credit-chart"></canvas></div>
     </div>
     <div class="note" id="credit-note">출처: 금융투자협회 FreeSIS · 1~2영업일 늦게 발표</div>
+
+    <h2>투자자별 순매수 (억원)</h2>
+    <div class="card">
+      <div class="tabs">
+        <button data-mkt="KOSPI" class="on">코스피</button>
+        <button data-mkt="KOSDAQ">코스닥</button>
+      </div>
+      <div id="flows">불러오는 중…</div>
+    </div>
+    <div class="note">출처: 네이버 증권(비공식) · 당일 값은 장중 잠정치 · 빨강 순매수 / 파랑 순매도</div>
 
     <h2>암호화폐</h2>
     <div class="grid" id="coins">불러오는 중…</div>
@@ -225,10 +240,34 @@
       if (!b) return;
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('on'));
       b.classList.add('on');
+      if (b.dataset.mkt) { mkt = b.dataset.mkt; drawFlows(); return; }
       if (b.dataset.sym) sym = b.dataset.sym;
       if (b.dataset.days) days = +b.dataset.days;
       drawChart();
     });
+
+    // ── 7. 투자자별 순매수: data/flows.json (시장별 [날짜, 개인, 외국인, 기관]) ──
+    let flows = {}, mkt = 'KOSPI';
+    function drawFlows() {
+      const rows = flows[mkt] || [];
+      const cell = v => `<td class="${v >= 0 ? 'up' : 'down'}">${v >= 0 ? '+' : ''}${v.toLocaleString('ko-KR')}</td>`;
+      const recent = rows.slice(-10).reverse();             // 최근 10거래일, 최신이 위
+      const month = rows.slice(-22);                        // 약 1개월 합계
+      const sum = [1, 2, 3].map(i => month.reduce((s, r) => s + r[i], 0));
+      document.getElementById('flows').innerHTML = `<table>
+        <tr><th>날짜</th><th>개인</th><th>외국인</th><th>기관</th></tr>
+        ${recent.map(r => `<tr><td>${r[0].slice(5).replace('-', '.')}</td>${cell(r[1])}${cell(r[2])}${cell(r[3])}</tr>`).join('')}
+        <tr class="sum"><td>${month.length}일 합계</td>${sum.map(cell).join('')}</tr>
+      </table>`;
+    }
+    async function loadFlows() {
+      try {
+        flows = await (await fetch('data/flows.json?t=' + Date.now())).json();
+        drawFlows();
+      } catch (e) {
+        document.getElementById('flows').textContent = '수급 데이터를 불러오지 못했어요.';
+      }
+    }
 
     // ── 5. 다가오는 일정: data/events.json을 읽어 다음 일정까지 카운트다운 ──
     let events = [];
@@ -329,6 +368,7 @@
       loadQuotes();
       loadHistory();
       loadCredit();
+      loadFlows();
       loadCoins();
       loadFx();
     }
