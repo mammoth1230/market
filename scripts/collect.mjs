@@ -1,4 +1,4 @@
-// GitHub Actions가 10분마다 실행하는 수집 스크립트
+// GitHub Actions가 1시간마다 실행하는 수집 스크립트
 // 브라우저에서는 CORS 때문에 못 가져오는 자료를 대신 모아서 data/ 폴더의 JSON 파일로 저장한다.
 //   latest.json  최신 시세 (Yahoo + 일본 국채)        history.json  날짜별 종가 기록 (끝난 날만)
 //   credit.json  신용잔고·예탁금 (금투협)              flows.json    투자자별 순매수 (네이버)
@@ -29,7 +29,7 @@ async function load(file, fallback) {   // 예전에 저장한 파일 읽기 (�
 }
 const save = (file, obj) => writeFile(file, JSON.stringify(obj) + '\n');   // 빈칸 없이 작게 저장
 
-// 10분마다 돌지만 천천히 바뀌는 자료는 가끔만 받는다 (상대 서버 배려 + 하루 요청 한도)
+// 1시간마다 돌지만 천천히 바뀌는 자료는 가끔만 받는다 (상대 서버 배려 + 하루 요청 한도)
 async function stale(file, minutes) {
   const { updated } = await load(file, {});
   return !updated || Date.now() - new Date(updated) > minutes * 60e3;
@@ -71,7 +71,7 @@ async function getQuote(name, symbol) {
   // 지금 장이 열려 있고, 가격도 오늘 장중 값인가 (장 시작 직후엔 Yahoo가 아직 어제 종가를 줄 때가 있다)
   const open = reg ? t >= reg.start && t < reg.end && m.regularMarketTime >= reg.start : null;
 
-  // 기록 합치기: '끝난 날'만 남긴다. 장중 가격은 10분마다 바뀌어서 매번 history.json을 다시 저장(커밋)하게 되므로
+  // 기록 합치기: '끝난 날'만 남긴다. 장중 가격은 수집 때마다 바뀌어서 매번 history.json을 다시 저장(커밋)하게 되므로
   // 오늘 값은 장이 끝난 뒤에만 넣고, 장중에는 화면이 latest.json의 가격을 그래프 끝에 붙인다
   const closes = r.indicators.quote[0].close;
   const done = r.timestamp.map((ts, i) => [day(ts), closes[i]]).filter(([d, v]) => v != null && d < today);
@@ -114,7 +114,7 @@ function addOfficial(name, symbol, rows, src, { time, live = false } = {}) {
 const mdy = s => s.replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3-$1-$2');   // '10/30/2026' → '2026-10-30'
 
 // 하루 한 번 바뀌는 공식 파일은 2시간에 한 번만 내려받고, 그 사이엔 저장해 둔 기록으로 시세를 만든다
-// (Cboe VIX 파일은 400KB쯤이라 10분마다 받으면 낭비). 마지막으로 받은 시각은 data/state.json에
+// (Cboe VIX 파일은 400KB쯤이라 매번 받으면 낭비). 마지막으로 받은 시각은 data/state.json에
 const state = await load('data/state.json', {});
 async function daily(key, symbol, fetchRows) {
   if (state[key] && Date.now() - new Date(state[key]) < 120 * 60e3 && history[symbol]?.length) return history[symbol];
@@ -236,6 +236,7 @@ await section('수급', async () => {
     }
     flows[market] = mergeByDate(flows[market], found);
   }
+  flows.updated = now();
   await save('data/flows.json', flows);
   return flows.KOSPI.at(-1).join(' ');
 });
@@ -358,7 +359,7 @@ if (await stale('data/valuation.json', 360)) await section('밸류에이션', as
 
 // ── 9. 관심 종목 기업 정보: 네이버 증권 (비공식) — 시총·PER·PBR·배당·외인소진율, 최근 연간 매출·영업이익 ── 1시간에 한 번
 // 한국 종목은 m.stock.naver.com, 해외 종목(코드에 . 이 있는 것)은 api.stock.naver.com 주소를 쓴다
-if (watch.length && await stale('data/stocks.json', 60)) await section('관심 종목', async () => {
+if (watch.length && await stale('data/stocks.json', 50)) await section('관심 종목', async () => {
   const num = v => Number(String(v ?? '').replace(/,/g, ''));
   const stocks = {};
   for (const s of watch) {
