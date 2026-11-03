@@ -108,6 +108,9 @@
     .cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 12px; }
     .cmp div { background: #0f1115; border: 1px solid #262a33; border-radius: 8px; padding: 8px; font-size: 12px; color: #888; }
     .cmp b { display: block; font-size: 16px; color: #e8e8e8; }
+    .cmp.tight { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 6px; }
+    .cmp.tight div { padding: 5px 7px; font-size: 11px; }
+    .cmp.tight b { font-size: 13px; }
     .val { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #2a2e38; font-size: 12px; color: #aaa; line-height: 1.6; }
   </style>
   <!-- 그래프 그리기 도구(Chart.js)를 공용 CDN에서 불러오기 -->
@@ -136,7 +139,11 @@
     </div>
 
     <div id="tab-watch" hidden>
-      <div class="card">관심 종목은 다음 단계(4묶음)에서 채울 예정이에요. 보고 싶은 종목을 알려 주세요.</div>
+      <div class="head"><h2>관심 종목</h2>
+        <div class="tabs" data-group="watch"><button data-range="30" class="on">30일</button><button data-range="250">1년</button></div>
+      </div>
+      <div class="grid wide" id="g-watch">불러오는 중…</div>
+      <div class="note" id="watch-note">시세 = Yahoo Finance(GitHub Actions 수집 · 장중 ~20분 지연) · 시총·PER·PBR·배당·외인소진율·실적 = 네이버 증권(비공식) · 고점대비 = 52주 최고 대비 · 종목 목록: data/watchlist.json</div>
     </div>
 
     <div id="tab-market">
@@ -215,7 +222,8 @@
       ['coin', '암호화폐', [['BTC-KRW', 'btc', 'krw'], ['ETH-KRW', 'eth', 'krw']]],
       ['krw', null, [['KRW=X', 'krw', 'won']]],   // 원/달러는 아래 따로 둔 칸에
     ];
-    const range = { us: 30, kr: 30, oil: 30, coin: 30, krw: 250 }; // 묶음별 그래프 기간(거래일)
+    const range = { us: 30, kr: 30, oil: 30, coin: 30, krw: 250, watch: 30 }; // 묶음별 그래프 기간(거래일)
+    let watchlist = [], stocks = {};   // 관심 종목 목록(data/watchlist.json)과 기업 정보(data/stocks.json)
     let latest = {}, hist = {}, news = {}, charts = {};
 
     const FMT = {
@@ -235,26 +243,29 @@
       ).join('');
     }
 
-    function bigCard(sym, key, fmt) {
+    function bigCard(sym, key, fmt, title = '', extra = '') {
       const q = latest[sym];
-      if (!q) return `<div class="card">${sym} 데이터 없음</div>`;
+      if (!q) return `<div class="card">${title || sym} 데이터 없음 (다음 수집 때 채워져요)</div>`;
       const off = (q.price / q.high52 - 1) * 100;
-      const closed = sym.startsWith('^') && q.open === false ? ' · 장 마감' : '';
+      // 장이 정해진 지수·주식만 '장 마감' 표시 (코인·환율·선물은 거의 24시간이라 빼기)
+      const exchange = sym.startsWith('^') || /^[A-Z]+$/.test(sym) || /\.K[SQ]$/.test(sym);
+      const closed = exchange && q.open === false ? ' · 장 마감' : '';
       return `<div class="card">
-        <div class="head"><span class="name">${q.name}</span><span class="when" id="t-${key}">${stamp(q.time)} 기준${closed}</span></div>
+        <div class="head"><span class="name">${title || q.name}</span><span class="when" id="t-${key}">${stamp(q.time)} 기준${closed}</span></div>
         <div class="price" id="p-${key}">${FMT[fmt](q.price)}</div>
         <span id="c-${key}">${change(q.changePct)}</span> <span class="note" id="d-${key}">전일대비</span>
         <div class="note">52주 최고 대비 <span class="${off >= 0 ? 'up' : 'down'}">${off.toFixed(1)}%</span> · 52주 최고 ${FMT[fmt](q.high52)}</div>
         <div class="mini"><canvas id="m-${key}"></canvas></div>
         <div class="hilo" id="h-${key}"></div>
         ${key === 'sp500' ? valuationHtml() : ''}
+        ${extra}
         <div class="news">${newsHtml(news[key])}</div>
       </div>`;
     }
 
     function drawMini(sym, key, fmt, days) {
       const rows = (hist[sym] || []).slice(-days);
-      if (!rows.length) return;
+      if (!rows.length || !document.getElementById('m-' + key)) return;   // 기록이나 카드가 아직 없으면 건너뛰기
       const vals = rows.map(r => r[1]);
       const up = vals[vals.length - 1] >= vals[0];
       const color = up ? '#ff5a5a' : '#4d8dff';
@@ -296,8 +307,36 @@
         document.getElementById('c-krw').innerHTML =
           `<span class="${diff >= 0 ? 'up' : 'down'}">${diff >= 0 ? '▲' : '▼'} ${Math.abs(diff).toFixed(2)}원 (${diff >= 0 ? '+' : ''}${k.changePct.toFixed(2)}%)</span>`;
       }
+      renderWatch();
       GROUPS.forEach(g => drawGroup(g[0]));
       loadCoins();   // 코인 가격은 실시간 값으로 덮어쓰기
+    }
+
+    // ── 관심 종목 탭: 지수 카드와 같은 모양 + 기업 정보 칸 ──
+    function stockInfoHtml(s) {
+      const d = stocks[s.code];
+      if (!d) return '';
+      const i = d.infos, f = d.fin;
+      // 실적 단위: 한국 = 억원 → 조원, 해외 = 백만 달러 → 십억 달러(B)
+      const money = v => !v ? '–' : f.unit === '억원'
+        ? (v >= 1e4 ? (v / 1e4).toFixed(1) + '조' : Math.round(v).toLocaleString('ko-KR') + '억')
+        : '$' + (v / 1e3).toFixed(1) + 'B';
+      const cells = [['시총', i['시총']], ['외인소진율', i['외인소진율']], ['PER', i['PER']], ['추정PER', i['추정PER']],
+                     ['PBR', i['PBR']], ['배당수익률', i['배당수익률']], ['EPS', i['EPS']], ['BPS', i['BPS']]]
+        .filter(([, v]) => v && v !== 'N/A');
+      return `<div class="cmp tight">${cells.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('')}</div>
+        <div class="val">최근 결산 ${f.period} · 매출 <b>${money(f.sales)}</b> · ${f.opName} <b>${money(f.op)}</b></div>`;
+    }
+
+    function renderWatch() {
+      const box = document.getElementById('g-watch');
+      if (!watchlist.length) { box.textContent = '관심 종목 목록(data/watchlist.json)을 불러오지 못했어요.'; return; }
+      // 차트 그리기용 묶음 정보 등록 (Yahoo 코드, 뉴스 열쇠, 가격 모양)
+      const cards = watchlist.map(s => [s.yahoo, 's_' + s.code, s.code.includes('.') ? 'usd' : 'krw']);
+      const g = GROUPS.find(x => x[0] === 'watch');
+      if (g) g[2] = cards; else GROUPS.push(['watch', null, cards]);
+      box.innerHTML = watchlist.map((s, n) =>
+        bigCard(cards[n][0], cards[n][1], cards[n][2], `${s.name} <span class="when">${s.code.replace(/\..*/, '')} · ${s.market}</span>`, stockInfoHtml(s))).join('');
     }
 
     // ── 2. 코인 실시간 가격: CoinGecko (브라우저가 직접, 1분마다) ──
@@ -450,11 +489,12 @@
 
     async function loadMarket() {
       try {
-        const [l, h, nw, rt, ks, fg, va, vm, bl] = await Promise.all(
-          ['latest', 'history', 'news', 'rates', 'kalshi', 'fng', 'valuation', 'valuation-manual', 'bls'].map(f =>
+        const [l, h, nw, rt, ks, fg, va, vm, bl, wl, st] = await Promise.all(
+          ['latest', 'history', 'news', 'rates', 'kalshi', 'fng', 'valuation', 'valuation-manual', 'bls', 'watchlist', 'stocks'].map(f =>
             fetch(`data/${f}.json?t=` + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({}))));
         latest = Object.fromEntries((l.quotes || []).map(q => [q.symbol, q]));
         hist = h; news = nw; bls = bl;
+        watchlist = wl.stocks || []; stocks = st.stocks || {};
         rates = rt.rates || {}; kalshi = ks.kalshi || {}; kalshiYear = ks.year || {};
         fng = fg.score != null ? fg : null; valuation = va.pe ? { ...va, forward: vm.forwardPE } : null;
         renderGroups();
@@ -809,7 +849,7 @@
       for (const t of ['market', 'calendar', 'watch'])
         document.getElementById('tab-' + t).hidden = t !== id;
       document.querySelectorAll('#main-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === id));
-      if (id === 'market') Object.values(charts).forEach(c => c.resize());   // 숨어 있던 그래프 크기 다시 맞추기
+      Object.values(charts).forEach(c => c.resize());   // 숨어 있던 그래프 크기 다시 맞추기
     }
     window.addEventListener('hashchange', () =>
       showTab(['market', 'calendar', 'watch'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'market'));
