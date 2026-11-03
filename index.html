@@ -206,11 +206,42 @@
   </div>
 
   <script>
-    // ── 등락률을 ▲ 빨강 / ▼ 파랑으로 ──
+    // ── 공통 도구 ──
+    // 등락률을 ▲ 빨강 / ▼ 파랑으로
     function change(pct) {
       const cls = pct >= 0 ? 'up' : 'down';
       const arrow = pct >= 0 ? '▲' : '▼';
       return `<span class="${cls}">${arrow} ${Math.abs(pct).toFixed(2)}%</span>`;
+    }
+
+    // data 폴더의 파일 읽기. cache: 'no-cache' = 매번 서버에 '바뀌었나?'만 물어보고,
+    // 안 바뀌었으면 예전에 받은 걸 그대로 써서 다시 내려받지 않는다
+    const getJSON = name => fetch(`data/${name}.json`, { cache: 'no-cache' })
+      .then(r => r.ok ? r.json() : {}).catch(() => ({}));
+
+    // 그래프 공통 설정: 움직이는 효과를 꺼서 그리기를 가볍게
+    Chart.defaults.animation = false;
+    Chart.defaults.color = '#777';
+    Chart.defaults.borderColor = '#222';
+    const charts = {}, pending = {};   // 그려진 그래프 / 숨은 탭이라 미뤄 둔 그래프
+
+    // 선 그래프 그리기. 지금 안 보이는 탭에 있으면 미뤄 두었다가 그 탭을 열 때 그린다
+    function drawChart(id, labels, datasets, opts = {}) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+      if (!el.offsetParent) { pending[id] = [labels, datasets, opts]; return; }
+      delete pending[id];
+      charts[id] = new Chart(el, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },   // 마우스를 올리면 그 날짜 값 표시
+          plugins: { legend: opts.legend ? { labels: { color: '#aaa', boxWidth: 12 } } : { display: false } },
+          scales: { x: opts.x || { ticks: { maxTicksLimit: 6 } }, y: opts.y || {} },
+        },
+      });
     }
 
     // ── 1. 지수·유가·코인 카드: data/latest.json(최신값) + history.json(기록) + news.json(뉴스) ──
@@ -224,7 +255,7 @@
     ];
     const range = { us: 30, kr: 30, oil: 30, coin: 30, krw: 250, watch: 30 }; // 묶음별 그래프 기간(거래일)
     let watchlist = [], stocks = {};   // 관심 종목 목록(data/watchlist.json)과 기업 정보(data/stocks.json)
-    let latest = {}, hist = {}, news = {}, charts = {};
+    let latest = {}, hist = {}, news = {};
 
     const FMT = {
       num: v => v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -264,26 +295,22 @@
     }
 
     function drawMini(sym, key, fmt, days) {
-      const rows = (hist[sym] || []).slice(-days);
+      // 기록(history.json)은 '끝난 날'만 있으므로, 오늘 값은 최신 시세(latest.json)로 끝에 붙인다
+      let rows = (hist[sym] || []).slice();
+      const q = latest[sym];
+      if (q?.date && rows.length) {
+        if (rows.at(-1)[0] === q.date) rows[rows.length - 1] = [q.date, q.price];
+        else if (rows.at(-1)[0] < q.date) rows.push([q.date, q.price]);
+      }
+      rows = rows.slice(-days);
       if (!rows.length || !document.getElementById('m-' + key)) return;   // 기록이나 카드가 아직 없으면 건너뛰기
       const vals = rows.map(r => r[1]);
-      const up = vals[vals.length - 1] >= vals[0];
-      const color = up ? '#ff5a5a' : '#4d8dff';
-      if (charts[key]) charts[key].destroy();
-      charts[key] = new Chart(document.getElementById('m-' + key), {
-        type: 'line',
-        // 날짜 글자를 짧게: 30일은 '10-23', 1년은 '25-11'
-        data: { labels: rows.map(r => days >= 250 ? r[0].slice(2, 7) : r[0].slice(5)), datasets: [{ data: vals, borderColor: color, borderWidth: 1.5, pointRadius: 0, tension: 0.2, fill: true, backgroundColor: color + '22' }] },
-        options: {
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          interaction: { mode: 'index', intersect: false },
-          scales: {
-            x: { ticks: { color: '#666', maxTicksLimit: 4, font: { size: 10 } }, grid: { display: false } },
-            y: { position: 'right', ticks: { color: '#666', maxTicksLimit: 3, font: { size: 10 } }, grid: { color: '#1e2129' } },
-          },
-        },
-      });
+      const color = vals.at(-1) >= vals[0] ? '#ff5a5a' : '#4d8dff';   // 기간 중 올랐으면 빨강, 내렸으면 파랑
+      drawChart('m-' + key,
+        rows.map(r => days >= 250 ? r[0].slice(2, 7) : r[0].slice(5)),   // 날짜 글자를 짧게: 30일은 '10-23', 1년은 '25-11'
+        [{ data: vals, borderColor: color, borderWidth: 1.5, pointRadius: 0, tension: 0.2, fill: true, backgroundColor: color + '22' }],
+        { x: { ticks: { maxTicksLimit: 4, font: { size: 10 } }, grid: { display: false } },
+          y: { position: 'right', ticks: { maxTicksLimit: 3, font: { size: 10 } }, grid: { color: '#1e2129' } } });
       document.getElementById('h-' + key).innerHTML =
         `<span>${days >= 250 ? '1년' : days + '거래일'} 최고 ${FMT[fmt](Math.max(...vals))}</span><span>최저 ${FMT[fmt](Math.min(...vals))}</span>`;
     }
@@ -322,7 +349,8 @@
         ? (v >= 1e4 ? (v / 1e4).toFixed(1) + '조' : Math.round(v).toLocaleString('ko-KR') + '억')
         : '$' + (v / 1e3).toFixed(1) + 'B';
       const cells = [['시총', i['시총']], ['외인소진율', i['외인소진율']], ['PER', i['PER']], ['추정PER', i['추정PER']],
-                     ['PBR', i['PBR']], ['배당수익률', i['배당수익률']], ['EPS', i['EPS']], ['BPS', i['BPS']]]
+                     ['PBR', i['PBR']], ['배당수익률', i['배당수익률']], ['EPS', i['EPS']], ['BPS', i['BPS']],
+                     ['52주 최고', i['52주 최고']], ['52주 최저', i['52주 최저']]]
         .filter(([, v]) => v && v !== 'N/A');
       return `<div class="cmp tight">${cells.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('')}</div>
         <div class="val">최근 결산 ${f.period} · 매출 <b>${money(f.sales)}</b> · ${f.opName} <b>${money(f.op)}</b></div>`;
@@ -341,6 +369,7 @@
 
     // ── 2. 코인 실시간 가격: CoinGecko (브라우저가 직접, 1분마다) ──
     async function loadCoins() {
+      if (document.hidden || !document.getElementById('p-btc')) return;   // 브라우저 탭이 숨어 있으면 쉬기
       try {
         const url = 'https://api.coingecko.com/api/v3/simple/price'
           + '?ids=bitcoin,ethereum&vs_currencies=krw&include_24hr_change=true&include_last_updated_at=true';
@@ -377,20 +406,8 @@
         const end = data[data.length - 1];
         return { label: `${name} ${end >= 0 ? '+' : ''}${end}%`, data, borderColor: color, borderWidth: width, pointRadius: 0, tension: 0.2 };
       });
-      if (charts.strength) charts.strength.destroy();
-      charts.strength = new Chart(document.getElementById('strength'), {
-        type: 'line',
-        data: { labels: dates, datasets },
-        options: {
-          maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: '#aaa', boxWidth: 12 } } },
-          interaction: { mode: 'index', intersect: false },
-          scales: {
-            x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
-            y: { ticks: { color: '#777', callback: v => v + '%' }, grid: { color: c => c.tick.value === 0 ? '#555' : '#222' } },
-          },
-        },
-      });
+      drawChart('strength', dates, datasets,
+        { legend: true, y: { ticks: { callback: v => v + '%' }, grid: { color: c => c.tick.value === 0 ? '#555' : '#222' } } });
     }
 
     // ── 4. 엔캐리 청산 경보: 값이 정해 둔 선을 넘으면 '주의'·'발동' ──
@@ -490,8 +507,7 @@
     async function loadMarket() {
       try {
         const [l, h, nw, rt, ks, fg, va, vm, bl, wl, st] = await Promise.all(
-          ['latest', 'history', 'news', 'rates', 'kalshi', 'fng', 'valuation', 'valuation-manual', 'bls', 'watchlist', 'stocks'].map(f =>
-            fetch(`data/${f}.json?t=` + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({}))));
+          ['latest', 'history', 'news', 'rates', 'kalshi', 'fng', 'valuation', 'valuation-manual', 'bls', 'watchlist', 'stocks'].map(getJSON));
         latest = Object.fromEntries((l.quotes || []).map(q => [q.symbol, q]));
         hist = h; news = nw; bls = bl;
         watchlist = wl.stocks || []; stocks = st.stocks || {};
@@ -587,20 +603,8 @@
         return { label: country, data: [...months.map(m => map[m] ?? null), rates[b].rate], borderColor: BCOLOR[b],
                  borderWidth: b === 'KR' || b === 'US' ? 2.5 : 1.3, pointRadius: 0, stepped: true, spanGaps: true };
       });
-      if (charts.rates) charts.rates.destroy();
-      charts.rates = new Chart(document.getElementById('rates-chart'), {
-        type: 'line',
-        data: { labels: [...months.map(m => m.slice(2)), '지금'], datasets },
-        options: {
-          maintainAspectRatio: false,
-          plugins: { legend: { labels: { color: '#aaa', boxWidth: 12 } } },
-          interaction: { mode: 'index', intersect: false },
-          scales: {
-            x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
-            y: { ticks: { color: '#777', callback: v => v + '%' }, grid: { color: '#222' } },
-          },
-        },
-      });
+      drawChart('rates-chart', [...months.map(m => m.slice(2)), '지금'], datasets,
+        { legend: true, y: { ticks: { callback: v => v + '%' } } });
     }
 
     // ── 11. CNN 공포·탐욕: 게이지 / 1년 추이 ──
@@ -609,19 +613,13 @@
     function renderFng() {
       const box = document.getElementById('fng');
       if (!fng) { box.textContent = '공포·탐욕 지수를 불러오지 못했어요.'; return; }
-      if (charts.fng) { charts.fng.destroy(); delete charts.fng; }
+      if (charts['fng-chart']) { charts['fng-chart'].destroy(); delete charts['fng-chart']; }
       const head = `<div class="head"><span class="name">${stamp(fng.time)} 기준</span></div>`;
       if (fngMode === 'chart') {
         box.innerHTML = head + '<div class="chart-box"><canvas id="fng-chart"></canvas></div>';
-        charts.fng = new Chart(document.getElementById('fng-chart'), {
-          type: 'line',
-          data: { labels: fng.history.map(h => h[0].slice(2)), datasets: [{ data: fng.history.map(h => h[1]), borderColor: '#f0b429', borderWidth: 1.5, pointRadius: 0 }] },
-          options: {
-            maintainAspectRatio: false, plugins: { legend: { display: false } }, interaction: { mode: 'index', intersect: false },
-            scales: { x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
-                      y: { min: 0, max: 100, ticks: { color: '#777', stepSize: 25 }, grid: { color: '#222' } } },
-          },
-        });
+        drawChart('fng-chart', fng.history.map(h => h[0].slice(2)),
+          [{ data: fng.history.map(h => h[1]), borderColor: '#f0b429', borderWidth: 1.5, pointRadius: 0 }],
+          { y: { min: 0, max: 100, ticks: { stepSize: 25 } } });
         return;
       }
       const s = fng.score;
@@ -690,7 +688,7 @@
     }
     async function loadFlows() {
       try {
-        flows = await (await fetch('data/flows.json?t=' + Date.now())).json();
+        flows = await getJSON('flows');
         drawFlows();
       } catch (e) {
         document.getElementById('flows').textContent = '수급 데이터를 불러오지 못했어요.';
@@ -705,44 +703,44 @@
       timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric',
       weekday: 'short', hour: 'numeric', minute: '2-digit',
     });
-    function when(d) {
-      return KST.format(d);
-    }
 
     // 카운트다운·요약에 쓸 '큰 일정' = 휴장 안내를 뺀 다음 일정
     function nextBig() {
       return events.find(e => e.at > Date.now() && e.kind !== 'HOLIDAY');
     }
 
+    // 1초마다: 일정이 바뀔 때만 칸 전체를 다시 그리고, 평소엔 숫자 4개만 바꾼다
+    let shownNext = null;
     function tick() {
-      const now = Date.now();
-      const next = nextBig();
+      if (document.hidden) return;   // 브라우저 탭이 숨어 있으면 쉬기
+      const next = nextBig(), box = document.getElementById('next');
       if (!next) {
-        document.getElementById('next').textContent = '등록된 다음 일정이 없어요. data/events.json에 추가해 주세요.';
+        box.textContent = '등록된 다음 일정이 없어요. data/events.json에 추가해 주세요.';
         return;
       }
+      if (shownNext !== next) {
+        if (shownNext) { renderCalendar(); renderNews(); }   // 일정 하나가 지나가면 목록도 새로
+        shownNext = next;
+        box.innerHTML = `
+          <div class="name"><span class="tag">${next.tag}</span>${next.cat}</div>
+          <div class="title">${next.title}</div>
+          <div class="name">한국시간 ${KST.format(new Date(next.at))}${next.local ? ' · ' + next.local : ''}${next.tentative ? ' · 잠정' : ''}</div>
+          <div class="count">${['일', '시간', '분', '초'].map(u => `<div><b></b><span>${u}</span></div>`).join('')}</div>`;
+      }
       // 남은 시간을 일·시·분·초로 나누기
-      const s = Math.floor((next.at - now) / 1000);
-      const parts = [[Math.floor(s / 86400), '일'], [Math.floor(s % 86400 / 3600), '시간'],
-                     [Math.floor(s % 3600 / 60), '분'], [s % 60, '초']];
-      document.getElementById('next').innerHTML = `
-        <div class="name"><span class="tag">${next.tag}</span>${next.cat}</div>
-        <div class="title">${next.title}</div>
-        <div class="name">한국시간 ${when(new Date(next.at))}${next.local ? ' · ' + next.local : ''}${next.tentative ? ' · 잠정' : ''}</div>
-        <div class="count">${parts.map(([n, u]) =>
-          `<div><b>${String(n).padStart(2, '0')}</b><span>${u}</span></div>`).join('')}</div>`;
-      if (s === 0) { renderCalendar(); renderNews(); }   // 일정 하나가 지나가면 목록도 새로
+      const s = Math.max(0, Math.floor((next.at - Date.now()) / 1000));
+      const nums = [Math.floor(s / 86400), Math.floor(s % 86400 / 3600), Math.floor(s % 3600 / 60), s % 60];
+      box.querySelectorAll('.count b').forEach((b, i) => { b.textContent = String(nums[i]).padStart(2, '0'); });
     }
 
     async function loadEvents() {
       try {
-        const [list, g] = await Promise.all(['events', 'guides'].map(f =>
-          fetch(`data/${f}.json?t=` + Date.now()).then(r => r.ok ? r.json() : {})));
+        const [list, g] = await Promise.all(['events', 'guides'].map(getJSON));
         events = list.map(e => ({ ...e, at: new Date(e.date).getTime() }))
                      .sort((a, b) => a.at - b.at);       // 날짜순 정렬
         guides = g;
+        shownNext = null;
         tick();
-        renderCalendar();
         if (rates.KR) renderRates();       // 금리 칸의 '다음 결정' 날짜도 일정표에서 가져오므로
         if (kalshi.US) renderFedBox();
         renderSummary();   // 요약 문장의 '다음 큰 일정'과 일정 뉴스도 다시
@@ -849,17 +847,17 @@
       for (const t of ['market', 'calendar', 'watch'])
         document.getElementById('tab-' + t).hidden = t !== id;
       document.querySelectorAll('#main-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === id));
-      Object.values(charts).forEach(c => c.resize());   // 숨어 있던 그래프 크기 다시 맞추기
+      // 이 탭이 숨어 있던 동안 미뤄 둔 그래프 그리기
+      for (const [cid, args] of Object.entries(pending)) drawChart(cid, ...args);
     }
     window.addEventListener('hashchange', () =>
       showTab(['market', 'calendar', 'watch'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'market'));
 
     // ── 6. 신용잔고·예탁금: data/credit.json 읽기 (rows = [날짜, 코스피 신용, 코스닥 신용, 예탁금]) ──
-    let creditChart;
     async function loadCredit() {
       const box = document.getElementById('credit');
       try {
-        const { rows } = await (await fetch('data/credit.json?t=' + Date.now())).json();
+        const { rows } = await getJSON('credit');
         const last = rows[rows.length - 1];
         const monthAgo = rows[Math.max(0, rows.length - 22)];   // 약 1개월(22영업일) 전
         const names = ['코스피 신용', '코스닥 신용', '투자자예탁금'];
@@ -872,27 +870,10 @@
             <span class="note"> 1개월 전 대비</span></div>`;
         }).join('');
 
-        if (creditChart) creditChart.destroy();
         const colors = ['#f0b429', '#b48cff', '#4dd4ac'];
-        creditChart = new Chart(document.getElementById('credit-chart'), {
-          type: 'line',
-          data: {
-            labels: rows.map(r => r[0]),
-            datasets: names.map((name, i) => ({
-              label: name, data: rows.map(r => r[i + 1]),
-              borderColor: colors[i], borderWidth: 2, pointRadius: 0,
-            })),
-          },
-          options: {
-            maintainAspectRatio: false,
-            plugins: { legend: { labels: { color: '#aaa', boxWidth: 12 } } },
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-              x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
-              y: { ticks: { color: '#777' }, grid: { color: '#222' } },
-            },
-          },
-        });
+        drawChart('credit-chart', rows.map(r => r[0]), names.map((name, i) => ({
+          label: name, data: rows.map(r => r[i + 1]), borderColor: colors[i], borderWidth: 2, pointRadius: 0,
+        })), { legend: true });
         document.getElementById('credit-note').textContent =
           `출처: 금융투자협회 FreeSIS · ${last[0]} 기준 (1~2영업일 늦게 발표)`;
       } catch (e) {
