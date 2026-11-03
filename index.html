@@ -91,6 +91,22 @@
     .b-ok { background: #1d3326; color: #4dd4ac; }
     .b-warn { background: #3a3116; color: #f0b429; }
     .b-hit { background: #3d1c1c; color: #ff5a5a; }
+    .kalshi { border-left: 4px solid #a98bff; }
+    #fed-box { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px 24px; }
+    .kalshi .row { min-width: 0; }
+    .kbadge { color: #c7b6ff; font-size: 12px; white-space: nowrap; }
+    .kbadge.thin { opacity: 0.6; }
+    .pbar { height: 6px; background: #262a33; border-radius: 3px; margin-top: 4px; overflow: hidden; }
+    .pbar span { display: block; height: 100%; background: #a98bff; }
+    .rate { font-size: 22px; font-weight: bold; margin: 4px 0; }
+    .gauge { position: relative; height: 14px; border-radius: 7px; margin: 18px 0 6px;
+      background: linear-gradient(90deg, #4d8dff, #6db3ff 25%, #888 50%, #ffa04d 75%, #ff5a5a); }
+    .gauge i { position: absolute; top: -6px; width: 4px; height: 26px; background: #fff; border-radius: 2px; transform: translateX(-2px); }
+    .scale { display: flex; justify-content: space-between; font-size: 11px; color: #777; }
+    .cmp { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 12px; }
+    .cmp div { background: #0f1115; border: 1px solid #262a33; border-radius: 8px; padding: 8px; font-size: 12px; color: #888; }
+    .cmp b { display: block; font-size: 16px; color: #e8e8e8; }
+    .val { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #2a2e38; font-size: 12px; color: #aaa; line-height: 1.6; }
   </style>
   <!-- 그래프 그리기 도구(Chart.js)를 공용 CDN에서 불러오기 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -122,9 +138,19 @@
     </div>
 
     <div id="tab-market">
+    <h2>◆ 칼시(Kalshi) · 연준 금리 전망</h2>
+    <div class="card kalshi" id="fed-box">불러오는 중…</div>
+    <div class="note">칼시 = 미국의 합법 예측시장. '12월에 인상'에 0.71달러를 걸 수 있으면 시장이 보는 확률이 71%라는 뜻이에요. 투자 조언이 아니라 사람들의 예상을 보여 주는 숫자예요.</div>
+
     <!-- 지수·유가·코인 카드 묶음: 아래 GROUPS 설정대로 자바스크립트가 채운다 -->
     <div id="groups"></div>
     <div class="note" id="quotes-note">지수·유가=Yahoo Finance(GitHub Actions 수집·장중 ~15분 지연) · 암호화폐 가격=CoinGecko(실시간) · 전일대비=직전 거래일 종가 기준 · 상승 빨강▲ / 하락 파랑▼</div>
+
+    <div class="head"><h2>주요국 기준금리 · 다음 결정</h2><span class="when" id="rate-gap"></span></div>
+    <div class="grid" id="rates">불러오는 중…</div>
+    <div class="card" style="margin-top: 12px;"><div class="chart-box"><canvas id="rates-chart"></canvas></div></div>
+    <div class="note" id="rates-note">기준금리 = 국제결제은행(BIS) 정책금리 통계(1~2주 늦게 반영) + 그 뒤 결정은 data/rates-manual.json에 직접 반영 · 다음 결정 확률 = 칼시 1순위 · '거래 적음'은 거래량이 적어 숫자가 거칠다는 뜻</div>
+    <div class="news" id="n-rates"></div>
 
     <div class="head"><h2>원/달러 환율</h2>
       <div class="tabs" data-group="krw"><button data-range="30">30일</button><button data-range="250" class="on">1년</button></div>
@@ -157,6 +183,13 @@
     </div>
     <div class="note">출처: 네이버 증권(비공식) · 당일 값은 장중 잠정치 · 빨강 순매수 / 파랑 순매도</div>
     <div class="news" id="n-flows"></div>
+
+    <div class="head"><h2>CNN 공포·탐욕 지수 (미국 투자심리)</h2>
+      <div class="tabs" data-group="fng"><button data-fng="gauge" class="on">게이지</button><button data-fng="chart">1년 추이</button></div>
+    </div>
+    <div class="card" id="fng">불러오는 중…</div>
+    <div class="note">0 = 극단적 공포 · 100 = 극단적 탐욕. 주가 흐름·변동성·옵션·안전자산 수요 등 7가지 지표를 CNN이 합친 숫자예요. (CNN 비공식 주소 · GitHub Actions 수집)</div>
+    <div class="news" id="n-fng"></div>
     <div class="note" id="news-note"></div>
     </div>
 
@@ -212,6 +245,7 @@
         <div class="note">52주 최고 대비 <span class="${off >= 0 ? 'up' : 'down'}">${off.toFixed(1)}%</span> · 52주 최고 ${FMT[fmt](q.high52)}</div>
         <div class="mini"><canvas id="m-${key}"></canvas></div>
         <div class="hilo" id="h-${key}"></div>
+        ${key === 'sp500' ? valuationHtml() : ''}
         <div class="news">${newsHtml(news[key])}</div>
       </div>`;
     }
@@ -374,12 +408,16 @@
 
       // 한국: 장중 / 오늘 마감 / 지난 ○요일 마감
       const today = KDAY.format(new Date());
-      const krToday = KDAY.format(new Date(k.time)) === today;
+      // 한국 날짜로 며칠 전 장인지: 0 = 오늘, 1 = 어제, 그 이상 = 지난 ○요일
+      const krAgo = Math.round((new Date(today) - new Date(KDAY.format(new Date(k.time)))) / 864e5);
       const km = move(k.changePct, q.changePct);
       const krWord = km === 'mix' ? '엇갈린' : km.replace('up', '오른').replace('down', '내린');
       const krLive = km === 'mix' ? '엇갈리고 있습니다' : km.replace('up', '오르고 있습니다').replace('down', '내리고 있습니다');
       s.push(k.open ? `오늘 한국 증시는 장중 코스피 ${pct(k.changePct)}, 코스닥 ${pct(q.changePct)}로 ${krLive}.`
-        : `${krToday ? '오늘' : `지난 ${KWD.format(new Date(k.time))}요일`} 한국 증시는 코스피 ${pct(k.changePct)}, 코스닥 ${pct(q.changePct)}로 ${krWord} 채 마감했습니다.`);
+        : `${krAgo === 0 ? '오늘' : krAgo === 1 ? '어제' : `지난 ${KWD.format(new Date(k.time))}요일`} 한국 증시는 코스피 ${pct(k.changePct)}, 코스닥 ${pct(q.changePct)}로 ${krWord} 채 마감했습니다.`);
+
+      // 미국 투자심리
+      if (fng) s.push(`미국 투자심리(CNN 공포탐욕)는 ${Math.round(fng.score)}로 '${FNG_KO[fng.rating] || fngWord(fng.score)}' 단계입니다.`);
 
       // 유가가 3% 이상 크게 움직였으면 한 줄
       const w = latest['CL=F'];
@@ -405,11 +443,16 @@
 
     async function loadMarket() {
       try {
-        const [l, h, nw] = await Promise.all(['latest', 'history', 'news'].map(f =>
-          fetch(`data/${f}.json?t=` + Date.now()).then(r => r.ok ? r.json() : {})));
+        const [l, h, nw, rt, ks, fg, va] = await Promise.all(['latest', 'history', 'news', 'rates', 'kalshi', 'fng', 'valuation'].map(f =>
+          fetch(`data/${f}.json?t=` + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({}))));
         latest = Object.fromEntries((l.quotes || []).map(q => [q.symbol, q]));
         hist = h; news = nw;
+        rates = rt.rates || {}; kalshi = ks.kalshi || {};
+        fng = fg.score != null ? fg : null; valuation = va.pe ? va : null;
         renderGroups();
+        renderFedBox();
+        renderRates();
+        renderFng();
         renderStrength();
         renderCarry();
         renderSummary();
@@ -422,9 +465,134 @@
       }
     }
 
+    // ── 10. 주요국 기준금리 + 칼시 확률: data/rates.json, data/kalshi.json ──
+    // [BIS 나라 코드, 나라, 중앙은행, 일정표(events.json)의 kind]
+    const BANKS = [['KR', '한국', '한국은행 BOK', 'BOK'], ['US', '미국', '연준 Fed', 'FOMC'], ['XM', '유럽', '유럽중앙은행 ECB', 'ECB'],
+                   ['JP', '일본', '일본은행 BOJ', 'BOJ'], ['AU', '호주', '호주중앙은행 RBA'], ['GB', '영국', '영란은행 BOE'],
+                   ['CA', '캐나다', '캐나다은행 BOC'], ['CN', '중국', '인민은행 LPR 1년']];
+    const BCOLOR = { KR: '#f0b429', US: '#ff5a5a', XM: '#6db3ff', JP: '#ff7a90', AU: '#4dd4ac', GB: '#b48cff', CA: '#ffa04d', CN: '#9aa3b2' };
+    const MD = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' });
+    let rates = {}, kalshi = {}, fng = null, valuation = null, fngMode = 'gauge';
+
+    function md(at) { return MD.format(new Date(at)).replace(/\. ?/g, '/').replace(/\/$/, ''); }   // '12/10'
+    // 미국은 '3.75~4.00%'처럼 범위로 정하므로 BIS의 가운데 값(3.875)을 범위로 되돌리기
+    function rateText(b, v) {
+      return b === 'US' ? `${(v - 0.125).toFixed(2)}~${(v + 0.125).toFixed(2)}%` : v.toFixed(2) + '%';
+    }
+    function kBadge(m, series) {
+      if (!m) return '';
+      return `<a class="kbadge${m.thin ? ' thin' : ''}" href="https://kalshi.com/markets/${series.toLowerCase()}" target="_blank" rel="noopener">◆ 칼시 ${m.label} ${m.prob}%${m.thin ? ' · 거래 적음' : ''}</a>`;
+    }
+    // 일정표의 같은 종류 회의 중 칼시 회의와 3일 안쪽으로 가까운 것 찾기 (나라마다 날짜 표기가 하루씩 다를 수 있어서)
+    function kalshiFor(b, at) {
+      return (kalshi[b]?.meetings || []).find(m => Math.abs(new Date(m.close) - at) < 3 * 864e5);
+    }
+
+    function renderFedBox() {
+      const k = kalshi.US;
+      const box = document.getElementById('fed-box');
+      if (!k || !k.meetings.length) { box.textContent = '칼시 데이터를 불러오지 못했어요.'; return; }
+      box.innerHTML = k.meetings.map((m, i) => {
+        const ev = events.find(e => e.kind === 'FOMC' && Math.abs(e.at - new Date(m.close)) < 3 * 864e5);
+        return `<div class="row"><div style="flex: 1">
+            <div class="name">${i ? '그다음' : '다음'} FOMC ${ev ? '(' + md(ev.at) + ' 발표)' : ''} · 1순위</div>
+            <div class="price" style="font-size: 20px">${m.label} <span style="color: #c7b6ff">${m.prob}%</span>${m.thin ? '<span class="badge b-warn">거래 적음</span>' : ''}</div>
+            ${m.options.filter(o => o.prob >= 2).sort((a, c) => c.prob - a.prob).map(o =>
+              `<div class="hilo"><span>${o.label}</span><span>${o.prob}%</span></div><div class="pbar"><span style="width: ${o.prob}%"></span></div>`).join('')}
+          </div></div>`;
+      }).join('');
+    }
+
+    function renderRates() {
+      const box = document.getElementById('rates');
+      if (!rates.KR) { box.textContent = '기준금리 데이터를 불러오지 못했어요.'; return; }
+      box.innerHTML = BANKS.map(([b, country, bank, kind]) => {
+        const r = rates[b];
+        if (!r) return '';
+        // 다음 결정: 일정표에 있으면 그 날짜, 없으면 칼시 회의 날짜, 중국은 매월 20일
+        const ev = kind && events.find(e => e.kind === kind && e.at > Date.now());
+        const km = (kalshi[b]?.meetings || [])[0];
+        const next = ev ? `${md(ev.at)} 결정` : km ? `${md(km.close)} 결정` : b === 'CN' ? '매월 20일 고시' : '';
+        return `<div class="card"><div class="name">${country} · ${bank}</div>
+          <div class="rate">${rateText(b, r.rate)}</div>
+          <div class="note" style="margin-top: 0">다음 ${next}</div>
+          <div style="margin-top: 4px">${kBadge(ev ? kalshiFor(b, ev.at) || km : km, kalshi[b]?.series || '')}</div>
+          <div class="when" style="margin-top: 4px" title="${r.src}">${r.asOf} 기준${r.src === 'BIS' ? '' : ' · 직접 반영'}</div></div>`;
+      }).join('');
+
+      // 한·미 금리차: 미국은 범위의 위쪽 끝으로 비교
+      const gap = rates.US.rate + 0.125 - rates.KR.rate;
+      document.getElementById('rate-gap').innerHTML = gap > 0
+        ? `<span class="up">한·미 금리 역전 ${gap.toFixed(2)}%p</span> (미국이 더 높음)` : `한·미 금리차 ${(-gap).toFixed(2)}%p (한국이 더 높음)`;
+
+      // 5년 그래프: 월별 값 + 맨 끝에 '지금' 값
+      const months = [...new Set(BANKS.flatMap(([b]) => (rates[b]?.monthly || []).map(m => m[0])))].sort();
+      const datasets = BANKS.filter(([b]) => rates[b]).map(([b, country]) => {
+        const map = Object.fromEntries(rates[b].monthly);
+        return { label: country, data: [...months.map(m => map[m] ?? null), rates[b].rate], borderColor: BCOLOR[b],
+                 borderWidth: b === 'KR' || b === 'US' ? 2.5 : 1.3, pointRadius: 0, stepped: true, spanGaps: true };
+      });
+      if (charts.rates) charts.rates.destroy();
+      charts.rates = new Chart(document.getElementById('rates-chart'), {
+        type: 'line',
+        data: { labels: [...months.map(m => m.slice(2)), '지금'], datasets },
+        options: {
+          maintainAspectRatio: false,
+          plugins: { legend: { labels: { color: '#aaa', boxWidth: 12 } } },
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
+            y: { ticks: { color: '#777', callback: v => v + '%' }, grid: { color: '#222' } },
+          },
+        },
+      });
+    }
+
+    // ── 11. CNN 공포·탐욕: 게이지 / 1년 추이 ──
+    const FNG_KO = { 'extreme fear': '극단적 공포', fear: '공포', neutral: '중립', greed: '탐욕', 'extreme greed': '극단적 탐욕' };
+    function fngWord(v) { return v < 25 ? '극단적 공포' : v < 45 ? '공포' : v <= 55 ? '중립' : v <= 75 ? '탐욕' : '극단적 탐욕'; }
+    function renderFng() {
+      const box = document.getElementById('fng');
+      if (!fng) { box.textContent = '공포·탐욕 지수를 불러오지 못했어요.'; return; }
+      if (charts.fng) { charts.fng.destroy(); delete charts.fng; }
+      const head = `<div class="head"><span class="name">${stamp(fng.time)} 기준</span></div>`;
+      if (fngMode === 'chart') {
+        box.innerHTML = head + '<div class="chart-box"><canvas id="fng-chart"></canvas></div>';
+        charts.fng = new Chart(document.getElementById('fng-chart'), {
+          type: 'line',
+          data: { labels: fng.history.map(h => h[0].slice(2)), datasets: [{ data: fng.history.map(h => h[1]), borderColor: '#f0b429', borderWidth: 1.5, pointRadius: 0 }] },
+          options: {
+            maintainAspectRatio: false, plugins: { legend: { display: false } }, interaction: { mode: 'index', intersect: false },
+            scales: { x: { ticks: { color: '#777', maxTicksLimit: 6 }, grid: { color: '#222' } },
+                      y: { min: 0, max: 100, ticks: { color: '#777', stepSize: 25 }, grid: { color: '#222' } } },
+          },
+        });
+        return;
+      }
+      const s = fng.score;
+      box.innerHTML = head + `
+        <div class="price" style="font-size: 34px">${Math.round(s)} <span style="font-size: 18px" class="${s < 45 ? 'down' : s > 55 ? 'up' : ''}">${FNG_KO[fng.rating] || fngWord(s)}</span></div>
+        <div class="gauge"><i style="left: ${s}%"></i></div>
+        <div class="scale"><span>0 극단적 공포</span><span>50</span><span>극단적 탐욕 100</span></div>
+        <div class="cmp">${[['전일 종가', fng.prev], ['1주 전', fng.week], ['1개월 전', fng.month], ['1년 전', fng.year]].map(([n, v]) =>
+          `<div>${n}<b>${Math.round(v)}</b>${fngWord(v)}</div>`).join('')}</div>`;
+    }
+
+    // S&P500 카드 아래 밸류에이션 줄
+    function valuationHtml() {
+      if (!valuation) return '';
+      const { pe, cape } = valuation;
+      const over = Math.round((cape.value / cape.mean - 1) * 100);
+      return `<div class="val">밸류에이션 · <b>P/E ${pe.value}</b> (최근 25년 중 ${pe.pct25}% 지점) ·
+        <b>CAPE ${cape.value}</b> (경기조정 10년 · 1871년 이후 평균 ${cape.mean} 대비 ${over >= 0 ? '+' : ''}${over}%, 25년 중 ${cape.pct25}% 지점)
+        <div class="when">높을수록 이익에 비해 비싸다는 뜻 · multpl.com 월별 (${pe.date} 기준)</div></div>`;
+    }
+
     function renderNews() {
       document.getElementById('n-credit').innerHTML = newsHtml(news.credit);
       document.getElementById('n-flows').innerHTML = newsHtml(news.flows);
+      document.getElementById('n-rates').innerHTML = newsHtml(news.rates);
+      document.getElementById('n-fng').innerHTML = newsHtml(news.fng);
       const next = nextBig();
       const items = next && (news.events || {})[next.title];
       document.getElementById('next-news').innerHTML = items && items.length
@@ -441,6 +609,7 @@
       b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('on'));
       b.classList.add('on');
       if (b.dataset.cat) { cat = b.dataset.cat; renderCalendar(); return; }
+      if (b.dataset.fng) { fngMode = b.dataset.fng; renderFng(); return; }
       if (b.dataset.mkt) { mkt = b.dataset.mkt; drawFlows(); return; }
       if (b.dataset.range) {
         const id = b.parentElement.dataset.group;
@@ -518,6 +687,8 @@
         guides = g;
         tick();
         renderCalendar();
+        if (rates.KR) renderRates();       // 금리 칸의 '다음 결정' 날짜도 일정표에서 가져오므로
+        if (kalshi.US) renderFedBox();
         renderSummary();   // 요약 문장의 '다음 큰 일정'과 일정 뉴스도 다시
         renderNews();
       } catch (e) {
@@ -529,6 +700,7 @@
     // ── 8. 주요 일정 탭: 분류 버튼 + 달별 묶음 + 읽는 법 + 관련 뉴스 ──
     const CATS = ['전체', '중앙은행·금리', '미국 경제지표', '기업 실적', '증시 수급', '상장·정치'];
     let guides = {}, cat = '전체', showPast = false;
+    const KIND_BANK = { FOMC: 'US', BOK: 'KR', ECB: 'XM', BOJ: 'JP' };   // 일정 종류 → 칼시 나라 코드
     const MONTH = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long' });
     const DAYNUM = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', day: 'numeric' });
     const HM = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -548,6 +720,7 @@
         <div class="cal-day"><b>${DAYNUM.format(new Date(e.at)).replace('일', '')}</b><span>${KWD.format(new Date(e.at))}</span></div>
         <div class="cal-body">
           <div><span class="tag">${e.tag}</span><b>${e.title}</b>${e.tentative ? '<span class="badge b-warn">잠정</span>' : ''}</div>
+          ${KIND_BANK[e.kind] && !past ? `<div style="margin-top: 4px">${kBadge(kalshiFor(KIND_BANK[e.kind], e.at), kalshi[KIND_BANK[e.kind]]?.series || '')}</div>` : ''}
           ${e.desc ? `<div class="note" style="margin-top: 4px">${e.desc}</div>` : ''}
           ${g ? `<details><summary>📖 ${g.title}</summary><ul>${g.points.map(p => `<li>${p}</li>`).join('')}</ul></details>` : ''}
           ${items && items.length && !past ? `<div class="news"><div class="note">발표 전 · 관련 뉴스</div>${newsHtml(items)}</div>` : ''}
