@@ -4,7 +4,8 @@
 // 금융투자협회 신용잔고·예탁금은 data/credit.json, 네이버 수급은 data/flows.json,
 // 일본 국채는 history.json의 JGB10, Google 뉴스 제목은 data/news.json,
 // 기준금리(BIS)는 data/rates.json, 칼시 확률은 data/kalshi.json, CNN 공포탐욕은 data/fng.json,
-// S&P500 P/E·CAPE는 data/valuation.json, 미국 지표 발표치(BLS)는 data/bls.json으로 저장한다.
+// S&P500 P/E·CAPE는 data/valuation.json, 미국 지표 발표치(BLS)는 data/bls.json,
+// 관심 종목(data/watchlist.json) 기업 정보는 data/stocks.json으로 저장한다.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
@@ -95,8 +96,16 @@ try {
   console.log('history.json이 없어서 새로 만듭니다.');
 }
 
+// 관심 종목 목록(data/watchlist.json)도 같은 방법으로 시세·기록을 모은다
+let watch = [];
+try {
+  watch = JSON.parse(await readFile('data/watchlist.json', 'utf8')).stocks;
+} catch (e) {
+  console.error('관심 종목 목록 읽기 실패:', e.message);
+}
+
 const quotes = [];
-for (const [name, symbol] of SYMBOLS) {
+for (const [name, symbol] of [...SYMBOLS, ...watch.map(s => [s.name, s.yahoo])]) {
   try {
     const { quote, series, today } = await getQuote(name, symbol);
     quotes.push(quote);
@@ -360,6 +369,49 @@ if (await stale('data/valuation.json', 360)) try {   // 월별 표라 6시간에
   console.error('밸류에이션 실패:', e.message);
 }
 
+// ── 관심 종목 기업 정보: 네이버 증권 (비공식) — 시총·PER·PBR·배당·외인소진율, 최근 연간 매출·영업이익 ──
+// 한국 종목은 m.stock.naver.com, 해외 종목(코드에 . 이 있는 것)은 api.stock.naver.com 주소를 쓴다
+if (watch.length && await stale('data/stocks.json', 60)) try {   // 1시간에 한 번
+  const naver = async url => {
+    const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+    if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+    return res.json();
+  };
+  const num = v => Number(String(v ?? '').replace(/,/g, ''));
+  const stocks = {};
+  for (const s of watch) {
+    try {
+      const overseas = s.code.includes('.');
+      const info = overseas
+        ? (await naver(`https://api.stock.naver.com/stock/${s.code}/basic`)).stockItemTotalInfos
+        : (await naver(`https://m.stock.naver.com/api/stock/${s.code}/integration`)).totalInfos;
+      const fin = overseas
+        ? await naver(`https://api.stock.naver.com/stock/${s.code}/finance/annual`)
+        : (await naver(`https://m.stock.naver.com/api/stock/${s.code}/finance/annual`)).financeInfo;
+      // 연간 실적: 예상치(E)가 아닌 가장 최근 결산 연도
+      const period = fin.trTitleList.filter(t => t.isConsensus !== 'Y').at(-1);
+      const row = title => fin.rowList.find(r => r.title === title)?.columns?.[period.key]?.value;
+      stocks[s.code] = {
+        infos: Object.fromEntries(info.map(x => [x.key, x.value])),   // { 시총: '1,292조 276억', PER: '9.91배', ... }
+        fin: {
+          period: period.title.replace(/\.$/, ''),
+          sales: num(row('매출액')),
+          op: num(overseas ? row('EBIT') : row('영업이익')),
+          opName: overseas ? 'EBIT(영업이익)' : '영업이익',
+          unit: overseas ? 'USD백만' : '억원',
+        },
+      };
+    } catch (e) {
+      console.error(`종목 ${s.name} 실패:`, e.message);
+    }
+    await new Promise(r => setTimeout(r, 300));
+  }
+  await writeFile('data/stocks.json', JSON.stringify({ updated: new Date().toISOString(), stocks }) + '\n');
+  console.log('관심 종목', Object.keys(stocks).length + '개');
+} catch (e) {
+  console.error('관심 종목 실패:', e.message);
+}
+
 // ── 미국 지표 실제 발표치: 미국 노동통계국(BLS) 공개 API (키 없이 하루 25번까지) ──
 // CPI(전체·근원), PPI(최종수요), 비농업 고용자 수, 실업률 → 일정표의 '결과'에 쓴다
 const BLS = { cpi: 'CUUR0000SA0', core: 'CUUR0000SA0L1E', ppi: 'WPUFD4', payrolls: 'CES0000000001', unemp: 'LNS14000000' };
@@ -447,10 +499,13 @@ if (await stale('data/news.json', 50)) try {   // 뉴스 검색은 1시간에 �
     news.events[e.title] = await take(q, 3);
   }
 
+  // 관심 종목은 종목 이름으로 3개씩 (열쇠 = 's_' + 코드)
+  for (const s of watch) NEWS['s_' + s.code] = [['', s.name + ' 주가', 3]];
+
   for (const [key, list] of Object.entries(NEWS)) {
     news[key] = [];
-    for (const [tag, q] of list) {
-      for (const a of await take(q, 1)) news[key].push({ tag, ...a });
+    for (const [tag, q, n = 1] of list) {
+      for (const a of await take(q, n)) news[key].push({ tag, ...a });
       await new Promise(r => setTimeout(r, 300));
     }
   }
