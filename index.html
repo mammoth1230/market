@@ -113,6 +113,9 @@
     .cmp.tight div { padding: 5px 7px; font-size: 11px; }
     .cmp.tight b { font-size: 13px; }
     .srcline { margin-top: 8px; font-size: 11px; color: #666; }
+    table.status { font-size: 12px; }
+    table.status td, table.status th { text-align: left; vertical-align: top; padding: 6px 4px; }
+    table.status td:first-child { color: #ccc; }
     .val { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #2a2e38; font-size: 12px; color: #aaa; line-height: 1.6; }
   </style>
   <!-- 그래프 그리기 도구(Chart.js)를 공용 CDN에서 불러오기 -->
@@ -160,7 +163,7 @@
     <div class="head"><h2>주요국 기준금리 · 다음 결정</h2><span class="when" id="rate-gap"></span></div>
     <div class="grid" id="rates">불러오는 중…</div>
     <div class="card" style="margin-top: 12px;"><div class="chart-box"><canvas id="rates-chart"></canvas></div></div>
-    <div class="note" id="rates-note">기준금리 = ✅ 국제결제은행(BIS) 정책금리 통계(1~3주 늦게 반영) + 그 뒤 결정은 data/rates-manual.json에 직접 반영 · 다음 결정 확률 = ✅ 칼시 1순위 · '거래 적음'은 거래량이 적어 숫자가 거칠다는 뜻</div>
+    <div class="note" id="rates-note">기준금리 = ✅ 국제결제은행(BIS) 정책금리 통계(1~3주 늦게 반영) + 그 뒤 결정은 data/rates-manual.json에 직접 반영 · 다음 결정 확률 = ✅ 칼시 1순위 · '거래 적음' = 누적 거래 5천 계약 미만(⚙ 이 사이트가 정한 기준)이라 숫자가 거칠다는 뜻</div>
     <div class="news" id="n-rates"></div>
 
     <div class="head"><h2>원/달러 환율</h2>
@@ -174,7 +177,7 @@
 
     <h2>🇯🇵🇺🇸 엔캐리 청산 · 글로벌 금리 — 매크로 경계</h2>
     <div class="card" id="carry">불러오는 중…</div>
-    <div class="note">엔캐리 3종(달러/엔·VIX·일본국채) 중 2개 이상 동시 발동이면 2024년 8월 폭락 재현 경계. 미국 10년물 4.6%↑는 나스닥·성장주 매수 경계(별도 신호). 모두 ✅ 공식 출처의 하루 마감 값: 달러/엔 = 유럽중앙은행, VIX = Cboe, 일본 국채 = 일본 재무성, 미국 국채 = 미국 재무부.</div>
+    <div class="note">⚙ 정상/주의/발동 기준선은 공식 기준이 아니라 <b>이 사이트가 정한 참고선</b>이에요. 근거: 2024년 8월 엔캐리 청산 때 달러/엔 저점 141.7, VIX 장중 최고 65.7. 일본 국채 2.8%·3%, 미국 10년물 4.6%는 시장에서 자주 언급되는 심리적 경계선이에요. 엔캐리 3종(달러/엔·VIX·일본국채) 중 2개 이상 동시 발동이면 2024년 8월 폭락 재현 경계. 미국 10년물은 나스닥·성장주 경계(별도 신호). 모두 ✅ 공식 출처의 하루 마감 값: 달러/엔 = 유럽중앙은행, VIX = Cboe, 일본 국채 = 일본 재무성, 미국 국채 = 미국 재무부.</div>
 
     <h2>신용융자잔고 · 투자자예탁금 (조원)</h2>
     <div class="grid" id="credit">불러오는 중…</div>
@@ -203,6 +206,10 @@
     <div class="news" id="n-fng"></div>
     <div class="note" id="news-note"></div>
     </div>
+
+    <h2>📋 자료 출처 · 갱신 현황</h2>
+    <div class="card" id="status">불러오는 중…</div>
+    <div class="note">자료 기준 = 그 숫자가 어느 날·어느 시각의 값인지 · 마지막 수집 = 이 사이트가 출처에서 받아 온 시각 (수집은 1시간마다, GitHub 사정으로 늦어질 수 있어요) · ⚠ = 예정보다 오래 수집되지 않음</div>
 
     <button onclick="loadAll()">🔄 새로고침</button>
   </div>
@@ -257,6 +264,7 @@
     ];
     const range = { us: 30, kr: 30, oil: 30, coin: 30, krw: 250, watch: 30 }; // 묶음별 그래프 기간(거래일)
     let watchlist = [], stocks = {};   // 관심 종목 목록(data/watchlist.json)과 기업 정보(data/stocks.json)
+    let latestUpdated, kalshiUpdated, stocksUpdated, ratesUpdated;   // 갱신 현황 표에 쓸 수집 시각
     let latest = {}, hist = {}, news = {};
 
     const FMT = {
@@ -416,7 +424,7 @@
     const CARRY = [
       { sym: 'JPY=X', name: 'USD/JPY (달러/엔)', desc: '엔화 강세 = 캐리 청산 신호 · 143 이하 주의 (2024 저점 141.7)', fmt: v => v.toFixed(1),
         level: v => v <= 141.7 ? 2 : v <= 143 ? 1 : 0, carry: true },
-      { sym: '^VIX', name: 'VIX 공포지수', desc: '25↑ 주의 / 30↑ 청산 가속 (2024년 66 터치)', fmt: v => v.toFixed(1),
+      { sym: '^VIX', name: 'VIX 공포지수', desc: '25↑ 주의 / 30↑ 청산 가속 (2024년 8월 장중 65.7)', fmt: v => v.toFixed(1),
         level: v => v >= 30 ? 2 : v >= 25 ? 1 : 0, carry: true },
       { sym: 'JGB10', name: '일본 국채 10년물', desc: '2.8% 돌파 주의 / 3%대 = 미국채 매도 가속', fmt: v => v.toFixed(2) + '%',
         level: v => v >= 3 ? 2 : v >= 2.8 ? 1 : 0, carry: true },
@@ -504,7 +512,8 @@
         s.push(`다음 큰 일정은 ${mo}/${dd}(${KWD.format(d)}) ${next.title}입니다.`);
       }
       document.getElementById('summary').innerHTML =
-        `<div class="name">📊 지금 시장은 · ${stamp(new Date().toISOString())} 기준</div><div style="margin-top: 6px">${s.join(' ')}</div>`;
+        `<div class="name">📊 지금 시장은 · ${stamp(new Date().toISOString())} 기준</div><div style="margin-top: 6px">${s.join(' ')}</div>
+         <div class="srcline">⚙ AI가 아니라 이 사이트가 정한 규칙으로 만든 문장이에요: 두 지수 평균 ±1.5% 이상이면 '크게', ±0.3% 미만이면 '소폭', 유가는 ±3%·환율은 ±1% 이상 움직인 날만 언급 · 숫자는 아래 각 칸의 출처와 같아요</div>`;
     }
 
     async function loadMarket() {
@@ -514,6 +523,7 @@
         latest = Object.fromEntries((l.quotes || []).map(q => [q.symbol, q]));
         hist = h; news = nw; bls = bl;
         watchlist = wl.stocks || []; stocks = st.stocks || {};
+        latestUpdated = l.updated; kalshiUpdated = ks.updated; stocksUpdated = st.updated; ratesUpdated = rt.updated;
         rates = rt.rates || {}; kalshi = ks.kalshi || {}; kalshiYear = ks.year || {};
         fng = fg.score != null ? fg : null; valuation = va.pe ? { ...va, forward: vm.forwardPE } : null;
         renderGroups();
@@ -524,6 +534,7 @@
         renderCarry();
         renderSummary();
         renderNews();
+        renderStatus();
         document.getElementById('news-note').textContent = nw.updated
           ? `카드 아래 뉴스 = ✅ Google 뉴스 공개 RSS 헤드라인(최근 2일, 자동 수집 ${stamp(nw.updated)}) · 마지막 수집 ${stamp(l.updated)}` : '';
       } catch (e) {
@@ -632,6 +643,42 @@
         <div class="scale"><span>0 극단적 공포</span><span>50</span><span>극단적 탐욕 100</span></div>
         <div class="cmp">${[['전일 종가', fng.prev], ['1주 전', fng.week], ['1개월 전', fng.month], ['1년 전', fng.year]].map(([n, v]) =>
           `<div>${n}<b>${Math.round(v)}</b>${fngWord(v)}</div>`).join('')}</div>`;
+    }
+
+    // ── 12. 자료 출처·갱신 현황 표: 자료마다 출처, 자료 기준 날짜, 마지막 수집 시각 ──
+    async function renderStatus() {
+      const [state, credit, flowsData] = await Promise.all(['state', 'credit', 'flows'].map(getJSON));
+      const q = s => latest[s] || {};
+      const day = d => d || '–';
+      // [자료, 출처, 자료 기준, 마지막 수집, 수집 주기(분)]
+      const rows = [
+        ...[['^GSPC', 'S&P500'], ['^IXIC', '나스닥'], ['^KS11', '코스피'], ['^KQ11', '코스닥'], ['CL=F', 'WTI 유가'], ['BZ=F', '브렌트유']]
+          .map(([s, n]) => [n, q(s).src, q(s).time ? stamp(q(s).time) : '–', latestUpdated, 60]),
+        ['원/달러·엔·유로·파운드·위안', q('KRW=X').src, day(q('KRW=X').date), state.ECB, 120],
+        ['VIX', q('^VIX').src, day(q('^VIX').date), state.VIX, 120],
+        ['미국 국채 10년물', q('^TNX').src, day(q('^TNX').date), state.UST10, 120],
+        ['일본 국채 10년물', q('JGB10').src, day(q('JGB10').date), state.JGB10, 120],
+        ['비트코인·이더리움', '✅ 업비트 공식 API', '화면에서 1분마다 실시간', null, 0],
+        ['주요국 기준금리', '✅ 국제결제은행(BIS) + 캐나다은행 공식 발표', day(Object.values(rates).map(r => r.asOf).sort().at(-1)), ratesUpdated, 180],
+        ['칼시 금리 확률', '✅ 칼시 공개 API', '수집 시각 기준', kalshiUpdated, 60],
+        ['CNN 공포·탐욕', '🟠 CNN 웹페이지용 주소', fng ? stamp(fng.time) : '–', fng?.updated, 60],
+        ['신용융자잔고·예탁금', '🟡 금융투자협회 FreeSIS', day(credit.rows?.at(-1)?.[0]), credit.updated, 180],
+        ['투자자별 순매수', '🟠 네이버 증권', day(flowsData.KOSPI?.at(-1)?.[0]), flowsData.updated, 60],
+        ['S&P500 P/E·CAPE', '🟠 multpl.com', day(valuation?.pe.date), valuation?.updated, 360],
+        ['S&P500 선행 P/E', '✅ FactSet 보고서 (손으로 입력)', day(valuation?.forward?.date), null, 0],
+        ['미국 CPI·PPI·고용 발표치', '✅ 미국 노동통계국(BLS) API', day(bls.cpi?.at(-1)?.[0]) + ' 분까지', bls.updated, 360],
+        ['관심 종목 기업 정보', '🟠 네이버 증권', '수집 시각 기준', stocksUpdated, 60],
+        ['카드 아래 뉴스', '✅ Google 뉴스 공개 RSS', '최근 2일 기사', news.updated, 60],
+        ['주요 일정', '✅ 각 기관 공식 일정표 (손으로 입력)', '2026-11-03 확인', null, 0],
+      ];
+      document.getElementById('status').innerHTML = `<table class="status">
+        <tr><th>자료</th><th>출처</th><th>자료 기준</th><th>마지막 수집</th></tr>
+        ${rows.map(([name, src, asOf, got, every]) => {
+          // 정해진 주기의 2배 + 1시간이 지나도록 수집이 없으면 ⚠
+          const late = got && every && Date.now() - new Date(got) > (every * 2 + 60) * 60e3;
+          return `<tr><td>${name}</td><td>${src || '–'}</td><td>${asOf}</td><td>${got ? (late ? '⚠ ' : '') + stamp(got) : '–'}</td></tr>`;
+        }).join('')}
+      </table>`;
     }
 
     // S&P500 카드 아래 밸류에이션 줄
