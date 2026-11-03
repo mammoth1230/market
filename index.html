@@ -55,6 +55,8 @@
     .cal-row { display: flex; gap: 12px; padding: 12px 0; border-top: 1px solid #222; }
     .cal-row:first-child { border-top: none; }
     .cal-row.past { opacity: 0.5; }
+    .cal-row.past.done { opacity: 0.85; }   /* 결과가 있는 지난 일정은 덜 흐리게 */
+    .result { margin-top: 4px; font-size: 13px; color: #e8e8e8; background: #1d2230; border-radius: 6px; padding: 3px 8px; display: inline-block; }
     .cal-day { width: 34px; text-align: center; flex: none; }
     .cal-day b { display: block; font-size: 20px; }
     .cal-day span { font-size: 12px; color: #888; }
@@ -443,12 +445,13 @@
 
     async function loadMarket() {
       try {
-        const [l, h, nw, rt, ks, fg, va] = await Promise.all(['latest', 'history', 'news', 'rates', 'kalshi', 'fng', 'valuation'].map(f =>
-          fetch(`data/${f}.json?t=` + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({}))));
+        const [l, h, nw, rt, ks, fg, va, vm, bl] = await Promise.all(
+          ['latest', 'history', 'news', 'rates', 'kalshi', 'fng', 'valuation', 'valuation-manual', 'bls'].map(f =>
+            fetch(`data/${f}.json?t=` + Date.now()).then(r => r.ok ? r.json() : {}).catch(() => ({}))));
         latest = Object.fromEntries((l.quotes || []).map(q => [q.symbol, q]));
-        hist = h; news = nw;
-        rates = rt.rates || {}; kalshi = ks.kalshi || {};
-        fng = fg.score != null ? fg : null; valuation = va.pe ? va : null;
+        hist = h; news = nw; bls = bl;
+        rates = rt.rates || {}; kalshi = ks.kalshi || {}; kalshiYear = ks.year || {};
+        fng = fg.score != null ? fg : null; valuation = va.pe ? { ...va, forward: vm.forwardPE } : null;
         renderGroups();
         renderFedBox();
         renderRates();
@@ -472,7 +475,7 @@
                    ['CA', '캐나다', '캐나다은행 BOC'], ['CN', '중국', '인민은행 LPR 1년']];
     const BCOLOR = { KR: '#f0b429', US: '#ff5a5a', XM: '#6db3ff', JP: '#ff7a90', AU: '#4dd4ac', GB: '#b48cff', CA: '#ffa04d', CN: '#9aa3b2' };
     const MD = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' });
-    let rates = {}, kalshi = {}, fng = null, valuation = null, fngMode = 'gauge';
+    let rates = {}, kalshi = {}, kalshiYear = {}, fng = null, valuation = null, fngMode = 'gauge';
 
     function md(at) { return MD.format(new Date(at)).replace(/\. ?/g, '/').replace(/\/$/, ''); }   // '12/10'
     // 미국은 '3.75~4.00%'처럼 범위로 정하므로 BIS의 가운데 값(3.875)을 범위로 되돌리기
@@ -501,6 +504,13 @@
               `<div class="hilo"><span>${o.label}</span><span>${o.prob}%</span></div><div class="pbar"><span style="width: ${o.prob}%"></span></div>`).join('')}
           </div></div>`;
       }).join('');
+      // 올해 남은 기간 전체: 추가 인상 / 인하 없음 확률
+      const { hikes, cuts } = kalshiYear;
+      if (hikes || cuts) box.innerHTML += `<div class="row">
+        <div class="name">올해 남은 기간 · 칼시</div>
+        ${hikes ? `<div class="hilo" style="font-size: 14px; color: #e8e8e8"><span>연내 <b>추가 인상</b> 1회 이상${hikes.done ? ` (올해 이미 ${hikes.done}회)` : ''}</span><b style="color: #c7b6ff">${hikes.more}%</b></div><div class="pbar"><span style="width: ${hikes.more}%"></span></div>` : ''}
+        ${cuts ? `<div class="hilo" style="font-size: 14px; color: #e8e8e8; margin-top: 8px"><span>연내 금리 <b>인하 0회</b></span><b style="color: #c7b6ff">${cuts.none}%</b></div><div class="pbar"><span style="width: ${cuts.none}%"></span></div>` : ''}
+      </div>`;
     }
 
     function renderRates() {
@@ -581,9 +591,10 @@
     // S&P500 카드 아래 밸류에이션 줄
     function valuationHtml() {
       if (!valuation) return '';
-      const { pe, cape } = valuation;
+      const { pe, cape, forward: f } = valuation;
       const over = Math.round((cape.value / cape.mean - 1) * 100);
       return `<div class="val">밸류에이션 · <b>P/E ${pe.value}</b> (최근 25년 중 ${pe.pct25}% 지점) ·
+        ${f ? `<b>선행 P/E ${f.value}</b> (<a href="${f.url}" target="_blank" rel="noopener" style="color: inherit">FactSet ${f.date.slice(5).replace('-', '/')}</a> · 5년 평균 ${f.avg5}, 10년 평균 ${f.avg10}) ·` : ''}
         <b>CAPE ${cape.value}</b> (경기조정 10년 · 1871년 이후 평균 ${cape.mean} 대비 ${over >= 0 ? '+' : ''}${over}%, 25년 중 ${cape.pct25}% 지점)
         <div class="when">높을수록 이익에 비해 비싸다는 뜻 · multpl.com 월별 (${pe.date} 기준)</div></div>`;
     }
@@ -712,15 +723,55 @@
       return n === 0 ? 'D-DAY' : n > 0 ? 'D-' + n : 'D+' + (-n);
     }
 
+    // ── 지난 일정의 '결과' 만들기 ──
+    // 중앙은행: BIS 금리가 바뀐 날 목록(rates[나라].changes)에서 회의 전날 금리와 며칠 뒤 금리를 비교
+    // 미국 지표: BLS 발표치(bls.json)에서 해당 월(ref) 값으로 전년비 등을 계산
+    let bls = {};
+    function rateOn(b, day) {   // day 날짜(포함)까지 마지막으로 정해진 금리
+      const c = (rates[b]?.changes || []).filter(x => x[0] <= day);
+      return c.length ? c.at(-1)[1] : null;
+    }
+    function shiftDay(day, n) { return new Date(Date.parse(day) + n * 864e5).toISOString().slice(0, 10); }
+    function resultOf(e) {
+      const day = KDAY.format(new Date(e.at));
+      const b = KIND_BANK[e.kind];
+      if (b) {
+        // ECB·BOJ는 결정이 며칠 뒤(다음 주 수요일 등)부터 적용되므로 8일 뒤 금리와 비교.
+        // BIS가 그날까지 아직 반영하지 않았으면 결과를 비워 둔다
+        if (!rates[b]) return '';
+        if (rates[b].asOf < shiftDay(day, 8)) return '<span class="when">BIS 통계 반영 대기 (보통 1~3주 걸려요)</span>';
+        const before = rateOn(b, shiftDay(day, -2)), after = rateOn(b, shiftDay(day, 8));
+        if (before == null || after == null) return '';
+        const t = v => rateText(b, v);
+        return after > before ? `<span class="up">인상</span> ${t(before)} → ${t(after)}`
+             : after < before ? `<span class="down">인하</span> ${t(before)} → ${t(after)}` : `동결 ${t(after)}`;
+      }
+      const val = (key, m) => (bls[key] || []).find(x => x[0] === m)?.[1];
+      const ago = (m, n) => { const [y, mo] = m.split('-').map(Number); const d = new Date(Date.UTC(y, mo - 1 - n, 1)); return d.toISOString().slice(0, 7); };
+      const yoy = (key, m) => { const a = val(key, m), p = val(key, ago(m, 12)); return a && p ? (a / p - 1) * 100 : null; };
+      const sign = v => (v >= 0 ? '+' : '') + v.toFixed(1) + '%';
+      if (e.kind === 'CPI' && yoy('cpi', e.ref) != null)
+        return `전년비 ${sign(yoy('cpi', e.ref))} · 근원 ${sign(yoy('core', e.ref))}`;
+      if (e.kind === 'PPI' && yoy('ppi', e.ref) != null)
+        return `최종수요 전년비 ${sign(yoy('ppi', e.ref))}`;
+      if (e.kind === 'JOBS' && val('payrolls', e.ref) != null && val('payrolls', ago(e.ref, 1)) != null) {
+        const diff = val('payrolls', e.ref) - val('payrolls', ago(e.ref, 1));   // 천 명 단위
+        return `비농업 고용 ${diff >= 0 ? '+' : ''}${(diff / 10).toFixed(1)}만 명 · 실업률 ${val('unemp', e.ref)}%`;
+      }
+      return '';
+    }
+
     function eventRow(e) {
       const g = guides[e.kind];
       const items = (news.events || {})[e.title];
       const past = e.at <= Date.now();
-      return `<div class="cal-row${past ? ' past' : ''}">
+      const result = past ? resultOf(e) : '';
+      return `<div class="cal-row${past ? ' past' : ''}${result ? ' done' : ''}">
         <div class="cal-day"><b>${DAYNUM.format(new Date(e.at)).replace('일', '')}</b><span>${KWD.format(new Date(e.at))}</span></div>
         <div class="cal-body">
           <div><span class="tag">${e.tag}</span><b>${e.title}</b>${e.tentative ? '<span class="badge b-warn">잠정</span>' : ''}</div>
           ${KIND_BANK[e.kind] && !past ? `<div style="margin-top: 4px">${kBadge(kalshiFor(KIND_BANK[e.kind], e.at), kalshi[KIND_BANK[e.kind]]?.series || '')}</div>` : ''}
+          ${result ? `<div class="result">결과 · ${result}</div>` : ''}
           ${e.desc ? `<div class="note" style="margin-top: 4px">${e.desc}</div>` : ''}
           ${g ? `<details><summary>📖 ${g.title}</summary><ul>${g.points.map(p => `<li>${p}</li>`).join('')}</ul></details>` : ''}
           ${items && items.length && !past ? `<div class="news"><div class="note">발표 전 · 관련 뉴스</div>${newsHtml(items)}</div>` : ''}
