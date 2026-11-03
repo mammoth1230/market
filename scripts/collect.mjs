@@ -109,6 +109,11 @@ for (const [name, symbol] of SYMBOLS) {
       .sort(([a], [b]) => a.localeCompare(b))
       .slice(-MAX_DAYS)
       .map(([d, v]) => [d, Number(v.toPrecision(6))]); // 유효숫자 6자리 (0.8915 같은 환율도 살리기)
+
+    // 전일대비는 우리 기록으로 다시 계산: Yahoo 일별 목록엔 어제 줄이 하루 넘게 빠져 있을 때가 있지만,
+    // 우리 기록엔 어제 마지막으로 받은 값이 남아 있다
+    const prevRow = history[symbol].filter(([d]) => d < today).at(-1);
+    if (prevRow) quote.changePct = (quote.price / prevRow[1] - 1) * 100;
   } catch (e) {
     console.error('실패:', e.message); // 하나가 실패해도 나머지는 계속
   }
