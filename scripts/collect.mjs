@@ -119,7 +119,8 @@ await save('data/history.json', history);
 
 // ── 3. 신용융자잔고 · 투자자예탁금: 금융투자협회 통계(FreeSIS) ──
 // 통계 사이트가 표를 채울 때 쓰는 주소에 '어떤 표, 어느 기간'을 보내면 JSON으로 돌려준다 (최신 날짜가 앞)
-await section('신용잔고', async () => {
+// 하루 한 번 발표되는 자료라 3시간에 한 번만
+if (await stale('data/credit.json', 180)) await section('신용잔고', async () => {
   const day = d => d.toISOString().slice(0, 10).replaceAll('-', '');
   const kofia = OBJ_NM => getJSON('https://freesis.kofia.or.kr/meta/getMetaDataList.do', {
     method: 'POST', headers: { 'Content-Type': 'application/json; charset=UTF-8' },
