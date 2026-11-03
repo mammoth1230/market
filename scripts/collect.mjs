@@ -79,7 +79,8 @@ async function getQuote(name, symbol) {
       time: new Date(m.regularMarketTime * 1000).toISOString(),
       high52: m.fiftyTwoWeekHigh,  // 52주 최고
       low52: m.fiftyTwoWeekLow,
-      open: reg ? now >= reg.start && now < reg.end : null, // 지금 장이 열려 있나
+      // 지금 장이 열려 있고, 가격도 오늘 장중 값인가 (장 시작 직후엔 Yahoo가 아직 어제 종가를 줄 때가 있다)
+      open: reg ? now >= reg.start && now < reg.end && m.regularMarketTime >= reg.start : null,
     },
     series,
     today,
@@ -213,7 +214,8 @@ try {
 // ── 주요국 기준금리: 국제결제은행(BIS) 정책금리 통계 (키 없이 CSV로 공개) ──
 // 나라 코드: KR 한국, US 미국, XM 유로존, JP 일본, AU 호주, GB 영국, CA 캐나다, CN 중국
 const BANKS = ['KR', 'US', 'XM', 'JP', 'AU', 'GB', 'CA', 'CN'];
-if (await stale('data/rates.json', 180)) try {   // 3시간에 한 번
+// 3시간에 한 번 (예전 형식이라 '바뀐 날 목록'이 없으면 바로)
+if (await stale('data/rates.json', 180) || !(await readFile('data/rates.json', 'utf8').catch(() => '')).includes('"changes"')) try {
   const bis = async (freq, start) => {
     const res = await fetch(`https://stats.bis.org/api/v1/data/WS_CBPOL/${freq}.${BANKS.join('+')}`
       + `?startPeriod=${start}&format=csv&detail=dataonly`, { headers: { 'User-Agent': 'Mozilla/5.0' } });
