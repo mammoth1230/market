@@ -421,6 +421,11 @@
       // 미국 투자심리
       if (fng) s.push(`미국 투자심리(CNN 공포탐욕)는 ${Math.round(fng.score)}로 '${FNG_KO[fng.rating] || fngWord(fng.score)}' 단계입니다.`);
 
+      // 환율이 1% 이상 움직였으면 한 줄 (원/달러가 오르면 = 원화 약세)
+      const fx = latest['KRW=X'];
+      if (fx && Math.abs(fx.changePct) >= 1)
+        s.push(`원/달러 환율은 ${Math.round(fx.price).toLocaleString('ko-KR')}원으로 ${Math.abs(fx.changePct).toFixed(2)}% ${fx.changePct > 0 ? '올랐습니다(원화 약세)' : '내렸습니다(원화 강세)'}.`);
+
       // 유가가 3% 이상 크게 움직였으면 한 줄
       const w = latest['CL=F'];
       if (w && Math.abs(w.changePct) >= 3)
