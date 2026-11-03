@@ -3,7 +3,9 @@ name: 시장 데이터 수집
 
 on:
   schedule:
-    - cron: '*/10 * * * *'   # 10분마다 (시간은 UTC 기준, GitHub 사정에 따라 몇 분씩 밀리거나 건너뛸 수 있음)
+    # 1시간마다, 매시 17분 (시간은 UTC 기준). 정각은 전 세계 예약이 몰려 GitHub이 미루거나 건너뛰기 쉬워서 피한다.
+    # 10분마다로 해 둬도 실제로는 1시간 간격 정도로만 돌았다 (2026-11-02~03 기록)
+    - cron: '17 * * * *'
   workflow_dispatch:          # Actions 화면에서 'Run workflow' 버튼으로 바로 실행 가능
 
 permissions:
@@ -30,6 +32,10 @@ jobs:
           git add data/
           git diff --cached --quiet && exit 0
           git commit -m "데이터 자동 수집"
-          # 그사이 내가 웹에서 다른 파일을 저장했으면, 그 위에 얹어서 다시 올리기
-          git pull --rebase origin main
-          git push
+          # 그사이 웹에서 다른 파일을 저장했으면, 그 위에 얹어서 다시 올리기 (최대 3번)
+          # (2026-11-03: 올리는 순간에 웹 저장과 겹쳐 한 번 거절된 적이 있어서)
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            sleep 10
+          done
+          exit 1
