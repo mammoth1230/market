@@ -1,0 +1,11 @@
+{
+  "note": "선행 P/E는 무료로 자동 수집할 곳이 없어서, FactSet 'Earnings Insight' 주간 보고서(매주 금요일 전후)를 보고 직접 고쳐 적어요.",
+  "forwardPE": {
+    "value": 18.7,
+    "date": "2026-10-23",
+    "avg5": 19.8,
+    "avg10": 19.1,
+    "src": "FactSet Earnings Insight",
+    "url": "https://insight.factset.com/sp-500-earnings-season-update-october-23-2026"
+  }
+}
