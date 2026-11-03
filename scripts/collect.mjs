@@ -48,14 +48,13 @@ function mergeByDate(oldRows = [], newRows = []) {
 }
 const ymd = s => s.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');   // '20261102' → '2026-11-02'
 
-// ── 1. 시세: Yahoo Finance (지수·환율·유가·코인·금리 + 관심 종목) ──
+// ── 1. 시세: Yahoo Finance (🟠 비공식 — 공식 출처 인증키를 받으면 차례로 옮길 것들) ──
+// 지수·유가·관심 종목만 남았다. 환율·VIX·미국 10년물·코인은 아래 2번의 공식 출처로 옮겼다
 const SYMBOLS = [
   ['S&P 500', '^GSPC'], ['나스닥', '^IXIC'], ['코스피', '^KS11'], ['코스닥', '^KQ11'],
-  ['원/달러', 'KRW=X'], ['WTI', 'CL=F'], ['브렌트유', 'BZ=F'],            // CL=F·BZ=F = 원유 선물
-  ['비트코인 (BTC)', 'BTC-KRW'], ['이더리움 (ETH)', 'ETH-KRW'],
-  ['VIX 공포지수', '^VIX'], ['미국 국채 10년물', '^TNX'],
-  ['달러/엔', 'JPY=X'], ['달러/유로', 'EUR=X'], ['달러/파운드', 'GBP=X'], ['달러/위안', 'CNY=X'],  // 통화 상대강도용
+  ['WTI', 'CL=F'], ['브렌트유', 'BZ=F'],            // CL=F·BZ=F = 원유 선물
 ];
+const YAHOO = '🟠 Yahoo Finance (비공식)';
 const watch = (await load('data/watchlist.json', { stocks: [] })).stocks;   // 관심 종목 목록
 const history = await load('data/history.json', {});
 const quotes = [];
@@ -84,38 +83,118 @@ async function getQuote(name, symbol) {
   // (Yahoo 일별 목록엔 어제 줄이 하루 넘게 빠져 있을 때가 있지만, 우리 기록엔 어제 마감 값이 남아 있다)
   const prev = history[symbol].filter(([d]) => d < today).at(-1)?.[1];
   quotes.push({
-    name, symbol, price: m.regularMarketPrice, date: today, open,
+    name, symbol, price: m.regularMarketPrice, date: today, open, src: YAHOO,
     changePct: prev ? (m.regularMarketPrice / prev - 1) * 100 : 0,
     time: new Date(m.regularMarketTime * 1000).toISOString(),
     high52: m.fiftyTwoWeekHigh, low52: m.fiftyTwoWeekLow,
   });
 }
 
-await section('시세', async () => {
+await section('시세(Yahoo)', async () => {
   for (const [name, symbol] of [...SYMBOLS, ...watch.map(s => [s.name, s.yahoo])]) {
     try { await getQuote(name, symbol); } catch (e) { console.error(symbol, '실패:', e.message); }
   }
   return quotes.length + '개';
 });
 
-// ── 2. 일본 국채 10년물: 일본 재무성(MOF)이 매일 올리는 이번 달 금리표(CSV) ──
-// 한 줄 예: R8.10.30,1.659,...  (R8 = 레이와 8년 = 2026년, 11번째 칸이 10년물)
+// ── 2. ✅ 공식 출처의 하루 단위 자료 ──
+// rows = [[날짜, 값], ...] 오래된 순. 공식 자료는 기록을 통째로 그 출처 값으로 바꾼다 (다른 출처와 섞지 않기)
+// live = 오늘 줄이 아직 진행 중인 값이면 true (코인): 기록에는 끝난 날만 넣고, 오늘 값은 최신 시세로만 쓴다
+function addOfficial(name, symbol, rows, src, { time, live = false } = {}) {
+  rows = rows.filter(([, v]) => v != null && !isNaN(v)).sort(([a], [b]) => a.localeCompare(b)).slice(-MAX_DAYS);
+  const [date, price] = rows.at(-1), prev = rows.at(-2)?.[1] ?? price;
+  history[symbol] = (live ? rows.slice(0, -1) : rows).map(([d, v]) => [d, Number(v.toPrecision(6))]);
+  const year = rows.slice(-260).map(r => r[1]);   // 52주 최고·최저 = 최근 약 1년
+  quotes.push({ name, symbol, price, date, open: live, src, changePct: (price / prev - 1) * 100,
+                time: time ? time(date) : date + 'T00:00:00Z', high52: Math.max(...year), low52: Math.min(...year) });
+  return `${price} (${date})`;
+}
+const mdy = s => s.replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3-$1-$2');   // '10/30/2026' → '2026-10-30'
+
+// 하루 한 번 바뀌는 공식 파일은 2시간에 한 번만 내려받고, 그 사이엔 저장해 둔 기록으로 시세를 만든다
+// (Cboe VIX 파일은 400KB쯤이라 10분마다 받으면 낭비). 마지막으로 받은 시각은 data/state.json에
+const state = await load('data/state.json', {});
+async function daily(key, symbol, fetchRows) {
+  if (state[key] && Date.now() - new Date(state[key]) < 120 * 60e3 && history[symbol]?.length) return history[symbol];
+  const rows = await fetchRows();
+  state[key] = now();
+  return rows;
+}
+
+// 일본 국채 10년물: 일본 재무성(MOF) 이번 달 금리표(CSV). 한 줄 예: R8.10.30,1.659,... (R8 = 레이와 8년 = 2026년, 11번째 칸이 10년물)
+// 이번 달 표만 주므로 지난 기록과 합친다
 await section('일본 국채', async () => {
-  const rows = (await getText('https://www.mof.go.jp/jgbs/reference/interest_rate/jgbcm.csv')).split('\n')
-    .map(l => l.split(',')).filter(c => /^R\d+\.\d+\.\d+$/.test(c[0]) && c[10])
-    .map(c => {
-      const [y, mo, d] = c[0].slice(1).split('.').map(Number);
-      return [`${2018 + y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`, Number(c[10])];
-    });
-  const all = history.JGB10 = mergeByDate(history.JGB10, rows);
-  const [date, last] = all.at(-1), prev = all.at(-2)?.[1] ?? last;
-  quotes.push({ name: '일본 국채 10년물', symbol: 'JGB10', price: last, date, changePct: (last / prev - 1) * 100,
-                time: date + 'T15:00:00+09:00' });
-  return `${last}% (${date})`;
+  const rows = await daily('JGB10', 'JGB10', async () =>
+    mergeByDate(history.JGB10, (await getText('https://www.mof.go.jp/jgbs/reference/interest_rate/jgbcm.csv')).split('\n')
+      .map(l => l.split(',')).filter(c => /^R\d+\.\d+\.\d+$/.test(c[0]) && c[10])
+      .map(c => {
+        const [y, mo, d] = c[0].slice(1).split('.').map(Number);
+        return [`${2018 + y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`, Number(c[10])];
+      })));
+  return addOfficial('일본 국채 10년물', 'JGB10', rows, '✅ 일본 재무성 국채금리표', { time: d => d + 'T06:00:00Z' });
+});
+
+// VIX: VIX를 만들어 발표하는 Cboe의 공식 일별 파일 (DATE,OPEN,HIGH,LOW,CLOSE)
+await section('VIX', async () => {
+  const rows = await daily('VIX', '^VIX', async () =>
+    (await getText('https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv'))
+      .trim().split('\n').slice(1).map(l => l.split(',')).map(c => [mdy(c[0]), Number(c[4])]));
+  return addOfficial('VIX 공포지수', '^VIX', rows, '✅ Cboe 공식 일별 종가', { time: d => d + 'T20:15:00Z' });
+});
+
+// 미국 국채 10년물: 미국 재무부 공식 일별 금리표 (올해 + 작년 파일, 최신이 위)
+await section('미국 국채', async () => {
+  const rows = await daily('UST10', '^TNX', async () => {
+    const y = new Date().getUTCFullYear(), out = [];
+    for (const year of [y - 1, y]) {
+      const lines = (await getText('https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/'
+        + `${year}/all?type=daily_treasury_yield_curve&field_tdr_date_value=${year}&page&_format=csv`)).trim().split('\n');
+      const col = lines[0].split(',').findIndex(h => h.replace(/"/g, '') === '10 Yr');
+      for (const l of lines.slice(1)) { const c = l.split(','); out.push([mdy(c[0]), Number(c[col])]); }
+    }
+    return out;
+  });
+  return addOfficial('미국 국채 10년물', '^TNX', rows, '✅ 미국 재무부 일별 금리', { time: d => d + 'T21:00:00Z' });
+});
+
+// 환율: 유럽중앙은행(ECB) 기준환율 (매일 오후 2시 15분 CET 발표). ECB는 '1유로 = 몇 ○○'로 주므로
+// '1달러 = 몇 ○○'는 (○○/유로) ÷ (달러/유로)로 바꾼다
+const FX = [['원/달러', 'KRW=X', 'KRW'], ['달러/엔', 'JPY=X', 'JPY'], ['달러/파운드', 'GBP=X', 'GBP'],
+            ['달러/위안', 'CNY=X', 'CNY'], ['달러/유로', 'EUR=X', 'EUR']];
+await section('환율(ECB)', async () => {
+  let fresh = null;
+  await daily('ECB', 'KRW=X', async () => {
+    const start = new Date(Date.now() - 560 * 864e5).toISOString().slice(0, 10);
+    const csv = (await getText(`https://data-api.ecb.europa.eu/service/data/EXR/D.USD+KRW+JPY+GBP+CNY.EUR.SP00.A?startPeriod=${start}&format=csvdata&detail=dataonly`))
+      .trim().split('\n').slice(1).map(l => l.split(','));
+    const byCur = { EUR: {} };   // { USD: { '2026-11-02': 1.1216, ... }, KRW: {...} }
+    for (const c of csv) (byCur[c[2]] ||= {})[c[6]] = Number(c[7]);
+    for (const d in byCur.USD) byCur.EUR[d] = 1;   // 1유로 = 1유로
+    fresh = Object.fromEntries(FX.map(([, symbol, cur]) => [symbol,
+      Object.entries(byCur.USD).filter(([d]) => byCur[cur][d]).map(([d, usd]) => [d, byCur[cur][d] / usd])]));
+    return fresh['KRW=X'];
+  });
+  for (const [name, symbol] of FX)
+    addOfficial(name, symbol, fresh ? fresh[symbol] : history[symbol], '✅ 유럽중앙은행 기준환율', { time: d => d + 'T13:15:00Z' });
+  return `원/달러 ${quotes.find(q => q.symbol === 'KRW=X')?.price.toFixed(2)}`;
+});
+
+// 코인: 업비트 공식 API 일봉 (하루 = 오전 9시 ~ 다음날 오전 9시, 원화). 한 번에 200개까지라 두 번 받는다
+await section('코인(업비트)', async () => {
+  for (const [name, symbol, market] of [['비트코인 (BTC)', 'BTC-KRW', 'KRW-BTC'], ['이더리움 (ETH)', 'ETH-KRW', 'KRW-ETH']]) {
+    const first = await getJSON(`https://api.upbit.com/v1/candles/days?market=${market}&count=200`);
+    await sleep(200);
+    const more = await getJSON(`https://api.upbit.com/v1/candles/days?market=${market}&count=200&to=${first.at(-1).candle_date_time_utc}`);
+    const rows = [...first, ...more].map(c => [c.candle_date_time_kst.slice(0, 10), c.trade_price]);
+    addOfficial(name, symbol, mergeByDate([], rows), '✅ 업비트 공식 API', { live: true, time: () => now() });
+    await sleep(200);
+  }
+  return '2개';
 });
 
 await save('data/latest.json', { updated: now(), quotes });
 await save('data/history.json', history);
+await save('data/state.json', state);
 
 // ── 3. 신용융자잔고 · 투자자예탁금: 금융투자협회 통계(FreeSIS) ──
 // 통계 사이트가 표를 채울 때 쓰는 주소에 '어떤 표, 어느 기간'을 보내면 JSON으로 돌려준다 (최신 날짜가 앞)
