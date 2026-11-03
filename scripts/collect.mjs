@@ -52,7 +52,10 @@ async function getQuote(name, symbol) {
 
   const m = result.meta;
   const price = m.regularMarketPrice;
-  const prev = series[series.length - 2][1]; // 끝에서 두 번째 = 전일 종가
+  const today = toDate(m.regularMarketTime + offset);
+  // 전일 종가 = 오늘(가격 날짜)보다 앞선 마지막 종가.
+  // '끝에서 두 번째'로 고르면 Yahoo 일별 목록에 오늘 줄이 늦게 들어올 때 이틀 전 값을 잘못 집는다
+  const prev = series.filter(([d]) => d < today).at(-1)[1];
   const now = Date.now() / 1000;
   const reg = m.currentTradingPeriod?.regular;  // 오늘 정규장 시작·끝 시각
 
@@ -68,7 +71,7 @@ async function getQuote(name, symbol) {
       open: reg ? now >= reg.start && now < reg.end : null, // 지금 장이 열려 있나
     },
     series,
-    today: toDate(result.meta.regularMarketTime + offset),
+    today,
   };
 }
 
