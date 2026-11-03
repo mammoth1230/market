@@ -1,0 +1,12 @@
+{
+  "note": "관심 종목 목록. 줄을 더하거나 빼면 다음 수집 때 반영돼요. code = 네이버 증권 코드(한국은 숫자 6자리, 미국 나스닥은 끝에 .O, 뉴욕거래소는 .N), yahoo = Yahoo 코드(한국은 끝에 .KS 코스피 / .KQ 코스닥)",
+  "stocks": [
+    { "name": "삼성전자", "code": "005930", "yahoo": "005930.KS", "market": "KOSPI" },
+    { "name": "SK하이닉스", "code": "000660", "yahoo": "000660.KS", "market": "KOSPI" },
+    { "name": "현대차", "code": "005380", "yahoo": "005380.KS", "market": "KOSPI" },
+    { "name": "SK텔레콤", "code": "017670", "yahoo": "017670.KS", "market": "KOSPI" },
+    { "name": "엔비디아", "code": "NVDA.O", "yahoo": "NVDA", "market": "NASDAQ" },
+    { "name": "마이크론", "code": "MU.O", "yahoo": "MU", "market": "NASDAQ" },
+    { "name": "마블 테크놀로지", "code": "MRVL.O", "yahoo": "MRVL", "market": "NASDAQ" }
+  ]
+}
