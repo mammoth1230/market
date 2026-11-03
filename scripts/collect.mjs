@@ -104,7 +104,9 @@ function addOfficial(name, symbol, rows, src, { time, live = false } = {}) {
   rows = rows.filter(([, v]) => v != null && !isNaN(v)).sort(([a], [b]) => a.localeCompare(b)).slice(-MAX_DAYS);
   const [date, price] = rows.at(-1), prev = rows.at(-2)?.[1] ?? price;
   history[symbol] = (live ? rows.slice(0, -1) : rows).map(([d, v]) => [d, Number(v.toPrecision(6))]);
-  const year = rows.slice(-260).map(r => r[1]);   // 52주 최고·최저 = 최근 약 1년
+  // 52주 최고·최저 = 최근 1년 (날짜로 자른다: 주식은 1년에 약 250거래일, 코인은 365일이라 개수로 자르면 틀린다)
+  const yearAgo = new Date(Date.parse(date) - 365 * 864e5).toISOString().slice(0, 10);
+  const year = rows.filter(([d]) => d > yearAgo).map(r => r[1]);
   quotes.push({ name, symbol, price, date, open: live, src, changePct: (price / prev - 1) * 100,
                 time: time ? time(date) : date + 'T00:00:00Z', high52: Math.max(...year), low52: Math.min(...year) });
   return `${price} (${date})`;
