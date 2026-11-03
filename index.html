@@ -112,6 +112,7 @@
     .cmp.tight { grid-template-columns: repeat(auto-fit, minmax(78px, 1fr)); gap: 6px; }
     .cmp.tight div { padding: 5px 7px; font-size: 11px; }
     .cmp.tight b { font-size: 13px; }
+    .srcline { margin-top: 8px; font-size: 11px; color: #666; }
     .val { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #2a2e38; font-size: 12px; color: #aaa; line-height: 1.6; }
   </style>
   <!-- 그래프 그리기 도구(Chart.js)를 공용 CDN에서 불러오기 -->
@@ -144,22 +145,22 @@
         <div class="tabs" data-group="watch"><button data-range="30" class="on">30일</button><button data-range="250">1년</button></div>
       </div>
       <div class="grid wide" id="g-watch">불러오는 중…</div>
-      <div class="note" id="watch-note">시세 = Yahoo Finance(GitHub Actions 수집 · 장중 ~20분 지연) · 시총·PER·PBR·배당·외인소진율·실적 = 네이버 증권(비공식) · 고점대비 = 52주 최고 대비 · 종목 목록: data/watchlist.json</div>
+      <div class="note" id="watch-note">시세 = 🟠 Yahoo(장중 ~20분 지연) · 시총·PER·PBR·배당·외인소진율·실적 = 🟠 네이버 증권 — 한국 종목은 거래소·전자공시(DART), 미국 종목 실적은 미국 증권거래위원회(SEC) 공식 자료로 옮기는 중 · 미국 종목 주가·외인소진율은 무료 공식 출처가 없어 비공식 유지 · 고점대비 = 52주 최고 대비 · 종목 목록: data/watchlist.json</div>
     </div>
 
     <div id="tab-market">
     <h2>◆ 칼시(Kalshi) · 연준 금리 전망</h2>
     <div class="card kalshi" id="fed-box">불러오는 중…</div>
-    <div class="note">칼시 = 미국의 합법 예측시장. '12월에 인상'에 0.71달러를 걸 수 있으면 시장이 보는 확률이 71%라는 뜻이에요. 투자 조언이 아니라 사람들의 예상을 보여 주는 숫자예요.</div>
+    <div class="note">칼시 = 미국의 합법 예측시장. '12월에 인상'에 0.71달러를 걸 수 있으면 시장이 보는 확률이 71%라는 뜻이에요. 투자 조언이 아니라 사람들의 예상을 보여 주는 숫자예요. (✅ 칼시 공개 API)</div>
 
     <!-- 지수·유가·코인 카드 묶음: 아래 GROUPS 설정대로 자바스크립트가 채운다 -->
     <div id="groups"></div>
-    <div class="note" id="quotes-note">지수·유가=Yahoo Finance(GitHub Actions 수집·장중 ~15분 지연) · 암호화폐 가격=CoinGecko(실시간) · 전일대비=직전 거래일 종가 기준 · 상승 빨강▲ / 하락 파랑▼</div>
+    <div class="note" id="quotes-note">출처 표시: ✅ 공식 기관·공식 API / 🟡 공식 기관 자료(공개 API 아님) / 🟠 비공식 · 지수·유가 = 🟠 Yahoo(장중 ~15분 지연, 공식 출처로 옮기는 중) · 암호화폐 = ✅ 업비트(실시간) · 전일대비 = 직전 거래일 종가 기준 · 상승 빨강▲ / 하락 파랑▼</div>
 
     <div class="head"><h2>주요국 기준금리 · 다음 결정</h2><span class="when" id="rate-gap"></span></div>
     <div class="grid" id="rates">불러오는 중…</div>
     <div class="card" style="margin-top: 12px;"><div class="chart-box"><canvas id="rates-chart"></canvas></div></div>
-    <div class="note" id="rates-note">기준금리 = 국제결제은행(BIS) 정책금리 통계(1~2주 늦게 반영) + 그 뒤 결정은 data/rates-manual.json에 직접 반영 · 다음 결정 확률 = 칼시 1순위 · '거래 적음'은 거래량이 적어 숫자가 거칠다는 뜻</div>
+    <div class="note" id="rates-note">기준금리 = ✅ 국제결제은행(BIS) 정책금리 통계(1~3주 늦게 반영) + 그 뒤 결정은 data/rates-manual.json에 직접 반영 · 다음 결정 확률 = ✅ 칼시 1순위 · '거래 적음'은 거래량이 적어 숫자가 거칠다는 뜻</div>
     <div class="news" id="n-rates"></div>
 
     <div class="head"><h2>원/달러 환율</h2>
@@ -169,11 +170,11 @@
 
     <h2>주요 통화 상대강도 · 달러 대비 1년</h2>
     <div class="card"><div class="chart-box"><canvas id="strength"></canvas></div></div>
-    <div class="note">1년 전을 0%로 놓고 · 위 = 달러 대비 강세, 아래 = 약세. 다른 통화가 다 오르는데 원화만 내리면 '달러 강세'가 아니라 원화만의 약세라는 뜻이에요. (Yahoo · GitHub Actions 수집)</div>
+    <div class="note">1년 전을 0%로 놓고 · 위 = 달러 대비 강세, 아래 = 약세. 다른 통화가 다 오르는데 원화만 내리면 '달러 강세'가 아니라 원화만의 약세라는 뜻이에요. (✅ 유럽중앙은행 기준환율, 하루 1번)</div>
 
     <h2>🇯🇵🇺🇸 엔캐리 청산 · 글로벌 금리 — 매크로 경계</h2>
     <div class="card" id="carry">불러오는 중…</div>
-    <div class="note">엔캐리 3종(달러/엔·VIX·일본국채) 중 2개 이상 동시 발동이면 2024년 8월 폭락 재현 경계. 미국 10년물 4.6%↑는 나스닥·성장주 매수 경계(별도 신호). 일본 국채=일본 재무성(전 영업일 기준), 나머지=Yahoo.</div>
+    <div class="note">엔캐리 3종(달러/엔·VIX·일본국채) 중 2개 이상 동시 발동이면 2024년 8월 폭락 재현 경계. 미국 10년물 4.6%↑는 나스닥·성장주 매수 경계(별도 신호). 모두 ✅ 공식 출처의 하루 마감 값: 달러/엔 = 유럽중앙은행, VIX = Cboe, 일본 국채 = 일본 재무성, 미국 국채 = 미국 재무부.</div>
 
     <h2>신용융자잔고 · 투자자예탁금 (조원)</h2>
     <div class="grid" id="credit">불러오는 중…</div>
@@ -191,14 +192,14 @@
       </div>
       <div id="flows">불러오는 중…</div>
     </div>
-    <div class="note">출처: 네이버 증권(비공식) · 당일 값은 장중 잠정치 · 빨강 순매수 / 파랑 순매도</div>
+    <div class="note">출처: 🟠 네이버 증권(비공식 — 투자자별 매매는 거래소 홈페이지 로그인으로만 공개되고 공식 API가 없어요) · 당일 값은 장중 잠정치 · 빨강 순매수 / 파랑 순매도</div>
     <div class="news" id="n-flows"></div>
 
     <div class="head"><h2>CNN 공포·탐욕 지수 (미국 투자심리)</h2>
       <div class="tabs" data-group="fng"><button data-fng="gauge" class="on">게이지</button><button data-fng="chart">1년 추이</button></div>
     </div>
     <div class="card" id="fng">불러오는 중…</div>
-    <div class="note">0 = 극단적 공포 · 100 = 극단적 탐욕. 주가 흐름·변동성·옵션·안전자산 수요 등 7가지 지표를 CNN이 합친 숫자예요. (CNN 비공식 주소 · GitHub Actions 수집)</div>
+    <div class="note">0 = 극단적 공포 · 100 = 극단적 탐욕. 주가 흐름·변동성·옵션·안전자산 수요 등 7가지 지표를 CNN이 합친 숫자예요. (🟠 CNN이 발표하는 값이지만 공개 API가 없어 CNN 웹페이지용 주소에서 받아요)</div>
     <div class="news" id="n-fng"></div>
     <div class="note" id="news-note"></div>
     </div>
@@ -292,6 +293,7 @@
         ${key === 'sp500' ? valuationHtml() : ''}
         ${extra}
         <div class="news">${newsHtml(news[key])}</div>
+        <div class="srcline">시세 출처 · ${q.src || '🟠 Yahoo Finance (비공식)'}</div>
       </div>`;
     }
 
@@ -368,20 +370,19 @@
         bigCard(cards[n][0], cards[n][1], cards[n][2], `${s.name} <span class="when">${s.code.replace(/\..*/, '')} · ${s.market}</span>`, stockInfoHtml(s))).join('');
     }
 
-    // ── 2. 코인 실시간 가격: CoinGecko (브라우저가 직접, 1분마다) ──
+    // ── 2. 코인 실시간 가격: 업비트 공식 API (브라우저가 직접, 1분마다) ──
     async function loadCoins() {
       if (document.hidden || !document.getElementById('p-btc')) return;   // 브라우저 탭이 숨어 있으면 쉬기
       try {
-        const url = 'https://api.coingecko.com/api/v3/simple/price'
-          + '?ids=bitcoin,ethereum&vs_currencies=krw&include_24hr_change=true&include_last_updated_at=true';
-        const data = await (await fetch(url)).json();
-        for (const [id, key] of [['bitcoin', 'btc'], ['ethereum', 'eth']]) {
-          const c = data[id], p = document.getElementById('p-' + key);
-          if (!c || !p) continue;
-          p.textContent = FMT.krw(c.krw);
-          document.getElementById('c-' + key).innerHTML = change(c.krw_24h_change);
-          document.getElementById('t-' + key).textContent = stamp(c.last_updated_at * 1000) + ' 기준 · 실시간';
-          document.getElementById('d-' + key).textContent = '24시간 대비';
+        const data = await (await fetch('https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH')).json();
+        for (const c of data) {
+          const key = c.market === 'KRW-BTC' ? 'btc' : 'eth', p = document.getElementById('p-' + key);
+          if (!p) continue;
+          p.textContent = FMT.krw(c.trade_price);
+          // 업비트 '전일 종가' = 오늘 오전 9시(한국시간) 기준 가격
+          document.getElementById('c-' + key).innerHTML = change(c.signed_change_rate * 100);
+          document.getElementById('t-' + key).textContent = stamp(c.trade_timestamp) + ' 기준 · 실시간';
+          document.getElementById('d-' + key).textContent = '전일대비 (오전 9시 기준)';
         }
       } catch (e) {
         console.log('코인 실시간 실패, 수집된 값 그대로 표시');
@@ -437,7 +438,8 @@
         return `<div class="carry">
           <div><div>${c.name}</div><div class="note" style="margin-top: 2px">${c.desc}</div></div>
           <div class="v">${c.fmt(q.price)}<span class="badge ${cls}">${label}</span>
-            <div class="when">${stamp(q.time)} · ${change(q.changePct)}</div></div>
+            <div class="when">${q.date} · ${change(q.changePct)}</div>
+            <div class="when">${q.src || ''}</div></div>
         </div>`;
       }).join('') + `<div class="carry"><div class="${hits >= 2 ? 'up' : ''}">${hits >= 2 ? '⚠ 엔캐리 청산 경계' : '● 엔캐리 3종 평온'} — 발동 ${hits}개 (미국 10년물은 별도 신호)</div></div>`;
     }
@@ -523,7 +525,7 @@
         renderSummary();
         renderNews();
         document.getElementById('news-note').textContent = nw.updated
-          ? `카드 아래 뉴스 = Google 뉴스 헤드라인(최근 2일, 자동 수집 ${stamp(nw.updated)}) · 지수 마지막 수집 ${stamp(l.updated)}` : '';
+          ? `카드 아래 뉴스 = ✅ Google 뉴스 공개 RSS 헤드라인(최근 2일, 자동 수집 ${stamp(nw.updated)}) · 마지막 수집 ${stamp(l.updated)}` : '';
       } catch (e) {
         document.getElementById('groups').textContent = '지수 데이터를 불러오지 못했어요.';
         console.error(e);
@@ -640,7 +642,7 @@
       return `<div class="val">밸류에이션 · <b>P/E ${pe.value}</b> (최근 25년 중 ${pe.pct25}% 지점) ·
         ${f ? `<b>선행 P/E ${f.value}</b> (<a href="${f.url}" target="_blank" rel="noopener" style="color: inherit">FactSet ${f.date.slice(5).replace('-', '/')}</a> · 5년 평균 ${f.avg5}, 10년 평균 ${f.avg10}) ·` : ''}
         <b>CAPE ${cape.value}</b> (경기조정 10년 · 1871년 이후 평균 ${cape.mean} 대비 ${over >= 0 ? '+' : ''}${over}%, 25년 중 ${cape.pct25}% 지점)
-        <div class="when">높을수록 이익에 비해 비싸다는 뜻 · multpl.com 월별 (${pe.date} 기준)</div></div>`;
+        <div class="when">높을수록 이익에 비해 비싸다는 뜻 · P/E·CAPE = 🟠 multpl.com 월별 (${pe.date} 기준, S&P 공식 이익 자료·실러 교수 자료로 옮길 예정) · 선행 P/E = ✅ FactSet 보고서</div></div>`;
     }
 
     function renderNews() {
@@ -876,7 +878,7 @@
           label: name, data: rows.map(r => r[i + 1]), borderColor: colors[i], borderWidth: 2, pointRadius: 0,
         })), { legend: true });
         document.getElementById('credit-note').textContent =
-          `출처: 금융투자협회 FreeSIS · ${last[0]} 기준 (1~2영업일 늦게 발표)`;
+          `출처: 🟡 금융투자협회 자본시장통계(FreeSIS) — 공식 통계 사이트의 표 자료 · ${last[0]} 기준 (1~2영업일 늦게 발표)`;
       } catch (e) {
         box.textContent = '신용잔고 데이터를 불러오지 못했어요.';
       }
