@@ -170,7 +170,7 @@
     <div class="head"><h2>주요국 기준금리 · 다음 결정</h2><span class="when" id="rate-gap"></span></div>
     <div class="grid" id="rates">불러오는 중…</div>
     <div class="card" style="margin-top: 12px;"><div class="chart-box"><canvas id="rates-chart"></canvas></div></div>
-    <div class="note" id="rates-note">기준금리 = ✅ 국제결제은행(BIS) 정책금리 통계(1~3주 늦게 반영) + 그 뒤 결정은 data/rates-manual.json에 직접 반영 · 다음 결정 확률 = ✅ 칼시 1순위 · '거래 적음' = 누적 거래 5천 계약 미만(⚙ 이 사이트가 정한 기준)이라 숫자가 거칠다는 뜻</div>
+    <div class="note" id="rates-note">기준금리 = ✅ 국제결제은행(BIS) 정책금리 통계(1~3주 늦게 반영) + 그 뒤는 미국·유럽·캐나다·영국 중앙은행이 매일 공개하는 공식 금리로 자동 반영 + 나머지 나라는 data/rates-manual.json에 직접 반영 · 다음 결정 확률 = ✅ 칼시 1순위 · '거래 적음' = 누적 거래 5천 계약 미만(⚙ 이 사이트가 정한 기준)이라 숫자가 거칠다는 뜻</div>
     <div class="news" id="n-rates"></div>
 
     <div class="head"><h2>원/달러 환율</h2>
@@ -580,6 +580,9 @@
     const MD = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' });
 
     function md(at) { return MD.format(new Date(at)).replace(/\. ?/g, '/').replace(/\/$/, ''); }   // '12/10'
+    // 금리 값이 어디서 왔나 (data/rates.json의 how). how가 없던 옛 자료는 src로 짐작
+    const HOW = { bis: 'BIS', official: '중앙은행 공식', manual: '직접 반영' };
+    const howOf = r => r.how || (r.src === 'BIS' ? 'bis' : 'manual');
     // 미국은 '3.75~4.00%'처럼 범위로 정하므로 BIS의 가운데 값(3.875)을 범위로 되돌리기
     function rateText(b, v) {
       return b === 'US' ? `${(v - 0.125).toFixed(2)}~${(v + 0.125).toFixed(2)}%` : v.toFixed(2) + '%';
@@ -629,7 +632,7 @@
           <div class="rate">${rateText(b, r.rate)}</div>
           <div class="note" style="margin-top: 0">다음 ${next}</div>
           <div style="margin-top: 4px">${kBadge(ev ? kalshiFor(b, ev.at) || km : km, kalshi[b]?.series || '')}</div>
-          <div class="when" style="margin-top: 4px" title="${r.src}">${r.asOf} 기준${r.src === 'BIS' ? '' : ' · 직접 반영'}</div></div>`;
+          <div class="when" style="margin-top: 4px" title="${r.src}">${r.asOf} 기준 · ${HOW[howOf(r)]}</div></div>`;
       }).join('');
 
       // 한·미 금리차: 미국은 범위의 위쪽 끝으로 비교
@@ -683,10 +686,11 @@
       const q = s => latest[s] || {};
       const day = d => d || '–';
       // 기준금리: 나라마다 BIS 반영 날짜가 달라서 가장 이른 날 ~ 가장 늦은 날로 보여 준다.
-      // BIS가 아닌 값(data/rates-manual.json에 직접 반영)은 어느 나라인지 출처 칸에 적는다
+      // BIS가 아닌 값(중앙은행 공식 일별 자료 / data/rates-manual.json 직접 반영)은 어느 나라인지 출처 칸에 적는다
       const asOfs = Object.values(rates).map(r => r.asOf).filter(Boolean).sort();
-      const manual = BANKS.filter(([b]) => rates[b] && rates[b].src !== 'BIS').map(([, country]) => country);
-      const rateSrc = '✅ 국제결제은행(BIS)' + (manual.length ? ` + 중앙은행 공식 발표 직접 반영(${manual.join('·')})` : '');
+      const by = how => BANKS.filter(([b]) => rates[b] && howOf(rates[b]) === how).map(([, country]) => country).join('·');
+      const rateSrc = '✅ 국제결제은행(BIS)' + (by('official') ? ` + 중앙은행 공식 일별 자료(${by('official')})` : '')
+        + (by('manual') ? ` + 공식 발표 직접 반영(${by('manual')})` : '');
       const rateAsOf = asOfs.length ? (asOfs[0] === asOfs.at(-1) ? asOfs[0] : `${asOfs[0]} ~ ${asOfs.at(-1)} (나라마다 다름)`) : '–';
       const edited = await eventsEdited;
       // [자료, 출처, 자료 기준, 마지막 수집, 수집 주기(분)]
