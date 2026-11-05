@@ -5,6 +5,7 @@ on:
   schedule:
     # 1시간마다, 매시 17분 (시간은 UTC 기준). 정각은 전 세계 예약이 몰려 GitHub이 미루거나 건너뛰기 쉬워서 피한다.
     # 10분마다로 해 둬도 실제로는 1시간 간격 정도로만 돌았다 (2026-11-02~03 기록)
+    # 실제 시작은 GitHub 사정으로 매시 50~59분쯤으로 늦어진다 (2026-11-04 기록)
     - cron: '17 * * * *'
   workflow_dispatch:          # Actions 화면에서 'Run workflow' 버튼으로 바로 실행 가능
 
@@ -20,10 +21,10 @@ jobs:
   collect:
     runs-on: ubuntu-latest    # GitHub이 빌려주는 리눅스 컴퓨터
     steps:
-      - uses: actions/checkout@v4       # 1. 내 저장소 파일을 컴퓨터로 내려받기
-      - uses: actions/setup-node@v4     # 2. Node.js 설치
+      - uses: actions/checkout@v5       # 1. 내 저장소 파일을 컴퓨터로 내려받기
+      - uses: actions/setup-node@v5     # 2. Node.js 설치
         with:
-          node-version: 20
+          node-version: 24          # Node 20은 2026년 4월 지원 종료 (GitHub 경고가 떠서 올림)
       - run: node scripts/collect.mjs   # 3. 수집 스크립트 실행
       - name: 바뀐 데이터 저장(커밋)    # 4. data 폴더가 바뀌었으면 저장소에 저장
         run: |
