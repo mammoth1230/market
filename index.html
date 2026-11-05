@@ -136,6 +136,7 @@
       <button data-tab="market" class="on">시장 현황</button>
       <button data-tab="calendar">주요 일정</button>
       <button data-tab="watch">관심 종목</button>
+      <button data-tab="portfolio">포트폴리오</button>
     </div>
 
     <div id="tab-calendar" hidden>
@@ -149,6 +150,12 @@
       </div>
       <div class="grid wide" id="g-watch">불러오는 중…</div>
       <div class="note" id="watch-note">시세 = 🟠 Yahoo(장중 ~20분 지연) · 시총·PER·PBR·배당·외인소진율·실적 = 🟠 네이버 증권 — 한국 종목은 거래소·전자공시(DART), 미국 종목 실적은 미국 증권거래위원회(SEC) 공식 자료로 옮기는 중 · 미국 종목 주가·외인소진율은 무료 공식 출처가 없어 비공식 유지 · 고점대비 = 52주 최고 대비 · 종목 목록: data/watchlist.json</div>
+    </div>
+
+    <div id="tab-portfolio" hidden>
+      <h2>투자 거물 포트폴리오 · 보유 비중 상위</h2>
+      <div class="grid wide" id="portfolio">불러오는 중…</div>
+      <div class="note">기관 6곳 = ✅ 미국 증권거래위원회(SEC) 13F 공식 신고: 분기마다(분기말 45일 안에) 공개, 미국 상장 주식·옵션의 롱 포지션만, 비중 = 신고 금액 기준(분기말 시세) · 캐시 우드 = ✅ ARK가 매일 공개하는 ARKK 보유 종목 · '풋'·'콜' = 주식이 아니라 옵션(풋은 하락에 거는 쪽)이고 비중은 옵션이 가리키는 주식 금액 기준 · 트럼프처럼 공식 신고가 없는 사람은 넣지 않아요 · 투자 조언이 아니에요</div>
     </div>
 
     <div id="tab-market">
@@ -194,6 +201,8 @@
         <button data-mkt="KOSDAQ">코스닥</button>
       </div>
       <div id="flows">불러오는 중…</div>
+      <div class="name" style="margin-top: 14px" id="flows-cum-title">최근 12개월 누적 순매수 (조원)</div>
+      <div class="chart-box"><canvas id="flows-chart"></canvas></div>
     </div>
     <div class="note">출처: 🟠 네이버 증권(비공식 — 투자자별 매매는 거래소 홈페이지 로그인으로만 공개되고 공식 API가 없어요) · 당일 값은 장중 잠정치 · 빨강 순매수 / 파랑 순매도</div>
     <div class="news" id="n-flows"></div>
@@ -217,7 +226,7 @@
   <script>
     // ── 설정 ──
     const REPO = 'mammoth1230/market';            // 이 사이트의 GitHub 저장소 (일정표 마지막 수정일 조회용)
-    const TABS = ['market', 'calendar', 'watch'];  // 맨 위 탭 = 주소 끝 #market / #calendar / #watch
+    const TABS = ['market', 'calendar', 'watch', 'portfolio'];  // 맨 위 탭 = 주소 끝 #market / #calendar / #watch / #portfolio
     // ⚙ 이 사이트가 정한 규칙 (공식 기준 아님). 숫자는 여기서만 바꾸면 요약 문장과 설명 글이 함께 바뀐다
     const RULE = {
       big: 1.5,     // 두 지수 평균 ±1.5% 이상 = '크게'
@@ -233,6 +242,7 @@
     let watchlist = [], stocks = {};                  // 관심 종목 목록과 기업 정보
     let rates = {}, kalshi = {}, kalshiYear = {}, fng = null, valuation = null, bls = {};
     let events = [], guides = {}, flows = {};         // 일정, 읽는 법, 투자자별 순매수
+    let ndx = null, portfolios = {};                  // 나스닥100 P/E, 투자 거물 포트폴리오
     // 화면 선택 상태: 공포탐욕 모양, 순매수 시장, 일정 분류, 지난 일정 펼침
     let fngMode = 'gauge', mkt = 'KOSPI', cat = '전체', showPast = false;
 
@@ -320,7 +330,7 @@
         <div class="note">52주 최고 대비 <span class="${off >= 0 ? 'up' : 'down'}">${off.toFixed(1)}%</span> · 52주 최고 ${FMT[fmt](q.high52)}</div>
         <div class="mini"><canvas id="m-${key}"></canvas></div>
         <div class="hilo" id="h-${key}"></div>
-        ${key === 'sp500' ? valuationHtml() : ''}
+        ${key === 'sp500' ? valuationHtml() : key === 'nasdaq' ? ndxHtml() : ''}
         ${extra}
         <div class="news">${newsHtml(news[key])}</div>
         <div class="srcline">시세 출처 · ${q.src || '🟠 Yahoo Finance (비공식)'}</div>
@@ -541,16 +551,17 @@
 
     async function loadMarket() {
       try {
-        const [l, h, nw, rt, ks, fg, va, vm, bl, wl, st] = await Promise.all(
-          ['latest', 'history', 'news', 'rates', 'kalshi', 'fng', 'valuation', 'valuation-manual', 'bls', 'watchlist', 'stocks'].map(getJSON));
+        const [l, h, nw, rt, ks, fg, va, vm, bl, wl, st, nd] = await Promise.all(
+          ['latest', 'history', 'news', 'rates', 'kalshi', 'fng', 'valuation', 'valuation-manual', 'bls', 'watchlist', 'stocks', 'ndx'].map(getJSON));
         latest = Object.fromEntries((l.quotes || []).map(q => [q.symbol, q]));
         hist = h; news = nw; bls = bl;
         watchlist = wl.stocks || []; stocks = st.stocks || {};
         latestUpdated = l.updated; kalshiUpdated = ks.updated; stocksUpdated = st.updated; ratesUpdated = rt.updated;
         rates = rt.rates || {}; kalshi = ks.kalshi || {}; kalshiYear = ks.year || {};
         fng = fg.score != null ? fg : null; valuation = va.pe ? { ...va, forward: vm.forwardPE } : null;
+        ndx = nd.pe ? nd : null;
         // 칸마다 따로 그리기: 한 칸이 실패해도(예: 지수 하나가 빠짐) 나머지 칸은 그대로 보인다
-        [renderGroups, renderFedBox, renderRates, renderFng, renderStrength, renderCarry, renderSummary, renderNews].forEach(safe);
+        [renderGroups, renderFedBox, renderRates, renderFng, renderStrength, renderCarry, renderSummary, renderNews, renderPortfolio].forEach(safe);
         renderStatus().catch(e => console.error('갱신 현황 실패:', e));
         document.getElementById('news-note').textContent = nw.updated
           ? `카드 아래 뉴스 = ✅ Google 뉴스 공개 RSS 헤드라인(최근 2일, 자동 수집 ${stamp(nw.updated)}) · 마지막 수집 ${stamp(l.updated)}` : '';
@@ -667,7 +678,8 @@
       .then(r => r.ok ? r.json() : []).then(j => j[0]?.commit?.committer?.date).catch(() => null);
 
     async function renderStatus() {
-      const [state, credit, flowsData] = await Promise.all(['state', 'credit', 'flows'].map(getJSON));
+      const [state, credit, flowsData, portData] = await Promise.all(['state', 'credit', 'flows', 'portfolios'].map(getJSON));
+      const guru = (portData.investors || []).filter(p => p.key !== 'wood'), ark = (portData.investors || []).find(p => p.key === 'wood');
       const q = s => latest[s] || {};
       const day = d => d || '–';
       // 기준금리: 나라마다 BIS 반영 날짜가 달라서 가장 이른 날 ~ 가장 늦은 날로 보여 준다.
@@ -693,6 +705,9 @@
         ['투자자별 순매수', '🟠 네이버 증권', day(flowsData.KOSPI?.at(-1)?.[0]), flowsData.updated, 60],
         ['S&P500 P/E·CAPE', '🟠 multpl.com', day(valuation?.pe.date), valuation?.updated, 360],
         ['S&P500 선행 P/E', '✅ FactSet 보고서 (손으로 입력)', day(valuation?.forward?.date), null, 0],
+        ['나스닥100 P/E', '🟠 WSJ P/E 표 (Birinyi Associates)', day(ndx?.date), ndx?.updated, 360],
+        ['포트폴리오 · 기관 6곳', '✅ SEC 13F 공식 신고', guru.length ? `${guru.map(p => p.asOf).sort()[0]} ~ ${guru.map(p => p.asOf).sort().at(-1)} 분기말` : '–', portData.updated, 720],
+        ['포트폴리오 · 캐시 우드', '✅ ARK 매일 공개 보유 종목', day(ark?.asOf), portData.updated, 720],
         ['미국 CPI·PPI·고용 발표치', '✅ 미국 노동통계국(BLS) API', day(bls.cpi?.at(-1)?.[0]) + ' 분까지', bls.updated, 360],
         ['관심 종목 기업 정보', '🟠 네이버 증권', '수집 시각 기준', stocksUpdated, 60],
         ['카드 아래 뉴스', '✅ Google 뉴스 공개 RSS', '최근 2일 기사', news.updated, 60],
@@ -717,6 +732,14 @@
         ${f ? `<b>선행 P/E ${f.value}</b> (<a href="${f.url}" target="_blank" rel="noopener" style="color: inherit">FactSet ${f.date.slice(5).replace('-', '/')}</a> · 5년 평균 ${f.avg5}, 10년 평균 ${f.avg10}) ·` : ''}
         <b>CAPE ${cape.value}</b> (경기조정 10년 · 1871년 이후 평균 ${cape.mean} 대비 ${over >= 0 ? '+' : ''}${over}%, 25년 중 ${cape.pct25}% 지점)
         <div class="when">높을수록 이익에 비해 비싸다는 뜻 · P/E·CAPE = 🟠 multpl.com 월별 (${pe.date} 기준, S&P 공식 이익 자료·실러 교수 자료로 옮길 예정) · 선행 P/E = ✅ FactSet 보고서</div></div>`;
+    }
+
+    // 나스닥 카드 아래 밸류에이션 줄 (그래프·가격은 나스닥 종합지수, P/E는 대형 100개 종목인 나스닥100)
+    function ndxHtml() {
+      if (!ndx) return '';
+      return `<div class="val">밸류에이션 · <b>나스닥100 P/E ${ndx.pe}</b> (1년 전 ${ndx.pe52}) · <b>예상 이익 기준 P/E ${ndx.fwd}</b>
+        <div class="when">P/E = 지난 12개월 이익 기준, 예상 이익 기준 = 앞으로 12개월 예상 이익으로 나눈 값 · 가격·그래프는 나스닥 종합지수, P/E는 나스닥100 ·
+        🟠 WSJ 'P/E & Yields' 표 (자료 Birinyi Associates, 매주 금요일 갱신) ${ndx.date} 기준</div></div>`;
     }
 
     function renderNews() {
@@ -761,7 +784,44 @@
         ${recent.map(r => `<tr><td>${r[0].slice(5).replace('-', '.')}</td>${cell(r[1])}${cell(r[2])}${cell(r[3])}</tr>`).join('')}
         <tr class="sum"><td>${month.length}일 합계</td>${sum.map(cell).join('')}</tr>
       </table>`;
+
+      // 최근 12개월 누적: 1년 전부터 날마다 더해 간 합계 (억원 → 조원). 기록이 1년이 안 되면 기록 시작일부터
+      const yearAgo = shiftDay(KDAY.format(new Date()), -365);
+      const year = rows.filter(r => r[0] > yearAgo);
+      if (!year.length) return;
+      let acc = [0, 0, 0];
+      const cum = year.map(r => (acc = acc.map((s, i) => s + r[i + 1])));
+      document.getElementById('flows-cum-title').textContent = year[0][0] <= shiftDay(yearAgo, 14)
+        ? `최근 12개월 누적 순매수 (조원) · ${year[0][0]}부터`
+        : `누적 순매수 (조원) · 기록이 있는 ${year[0][0]}부터 (1년치는 자동 수집이 채우는 중)`;
+      drawChart('flows-chart', year.map(r => r[0].slice(2)), ['개인', '외국인', '기관'].map((name, i) => ({
+        label: `${name} ${(cum.at(-1)[i] / 1e4 >= 0 ? '+' : '')}${(cum.at(-1)[i] / 1e4).toFixed(1)}조`,
+        data: cum.map(c => Math.round(c[i] / 1e3) / 10), borderColor: ['#f0b429', '#6db3ff', '#4dd4ac'][i], borderWidth: 2, pointRadius: 0,
+      })), { legend: true, y: { ticks: { callback: v => v + '조' }, grid: { color: c => c.tick.value === 0 ? '#555' : '#222' } } });
     }
+    // ── 포트폴리오 탭: data/portfolios.json (사람마다 보유 비중 상위 15개) ──
+    function renderPortfolio() {
+      const box = document.getElementById('portfolio');
+      const list = portfolios.investors || [];
+      if (!list.length) { box.textContent = '포트폴리오 자료가 아직 없어요 (다음 수집 때 채워져요).'; return; }
+      const label = ([name, , put]) => name + (put === 'Put' ? ' <span class="badge b-hit">풋</span>' : put === 'Call' ? ' <span class="badge b-warn">콜</span>' : '');
+      box.innerHTML = list.map(p => {
+        const when = p.filed ? `${p.filed} 신고 · ${p.asOf} 분기말 기준` : `${p.asOf} 기준 · 매일 갱신`;
+        return `<div class="card"><div class="name">${p.role}</div>
+          <div class="price" style="font-size: 20px">${p.name}</div>
+          <div class="when">${when} · ${p.count}종목 · <a href="${p.url}" target="_blank" rel="noopener" style="color: inherit">원문 ↗</a></div>
+          ${p.top.slice(0, 8).map(h => `<div class="hilo" style="color: #ddd; font-size: 13px; margin-top: 8px"><span>${label(h)}</span><span>${h[1]}%</span></div>
+            <div class="pbar"><span style="width: ${Math.min(100, h[1])}%"></span></div>`).join('')}
+          ${p.top.length > 8 ? `<div class="note">그다음 · ${p.top.slice(8).map(h => `${label(h)} ${h[1]}%`).join(' · ')}</div>` : ''}
+          <div class="news">${newsHtml(news['p_' + p.key])}</div>
+          <div class="srcline">출처 · ${p.src}</div></div>`;
+      }).join('');
+    }
+    async function loadPortfolio() {
+      portfolios = await getJSON('portfolios');
+      safe(renderPortfolio);
+    }
+
     async function loadFlows() {
       try {
         flows = await getJSON('flows');
@@ -962,6 +1022,7 @@
       loadMarket();
       loadCredit();
       loadFlows();
+      loadPortfolio();
     }
 
     loadAll();
