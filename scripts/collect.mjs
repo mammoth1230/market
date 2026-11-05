@@ -6,11 +6,14 @@
 //   fng.json     CNN 공포탐욕                          valuation.json S&P500 P/E·CAPE (multpl)
 //   stocks.json  관심 종목 기업 정보 (네이버)          bls.json      미국 지표 발표치 (BLS)
 //   news.json    카드 아래 뉴스 (Google 뉴스)
+//   ndx.json     나스닥100 P/E (WSJ)                   portfolios.json 투자 거물 포트폴리오 (SEC 13F·ARK)
 
 import { readFile, writeFile } from 'node:fs/promises';
 
 // ── 공통 도구 ──
 const UA = { 'User-Agent': 'Mozilla/5.0' };
+// 로봇을 거절하는 사이트(CNN·WSJ)에는 브라우저처럼 보이는 머리말을 쓴다
+const BROWSER = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const now = () => new Date().toISOString();
 const MAX_DAYS = 400;   // 날짜별 기록은 최근 400개(약 1년 반)만 보관
@@ -221,20 +224,27 @@ if (await stale('data/credit.json', 180)) await section('신용잔고', async ()
 
 // ── 4. 투자자별 순매수(억원): 네이버 증권 모바일 내부 주소 (비공식, 언제든 바뀔 수 있음) ──
 // 과거를 한 번에 주지 않으므로 날짜별로 하나씩 물어보고, 우리 쪽 data/flows.json에 직접 쌓는다
+// 처음 한 번은 12개월 누적 그래프용으로 1년치(380일)를 채우고(몇 분 걸림), 그 뒤로는 최근 4일만 다시 확인 (당일 값은 장중 잠정치라서)
 await section('수급', async () => {
   const flows = await load('data/flows.json', {});
   const num = s => Number(String(s).replace(/[,+]/g, ''));   // '+6,028' → 6028
+  flows.filled ||= {};   // 시장별로 1년치 채우기를 마친 날
   for (const market of ['KOSPI', 'KOSDAQ']) {
-    const found = [];
-    const back = (flows[market] || []).length < 20 ? 45 : 4;   // 처음엔 45일치, 그 뒤로는 최근 4일만 다시 확인
+    const found = [], have = new Set((flows[market] || []).map(r => r[0]));
+    const back = flows.filled[market] ? 4 : 380;
     for (let i = 0; i < back; i++) {
-      const day = new Date(Date.now() + 9 * 3600e3 - i * 864e5).toISOString().slice(0, 10).replaceAll('-', '');   // 한국 날짜
-      const t = await getJSON(`https://m.stock.naver.com/api/index/${market}/trend?bizdate=${day}`);
+      const kst = new Date(Date.now() + 9 * 3600e3 - i * 864e5);   // 한국 날짜
+      if (kst.getUTCDay() === 0 || kst.getUTCDay() === 6) continue;   // 주말은 장이 없으니 묻지 않기
+      const day = kst.toISOString().slice(0, 10).replaceAll('-', '');
+      if (i >= 4 && have.has(ymd(day))) continue;   // 이미 받아 둔 지난 날은 다시 묻지 않기
+      // 하루치가 실패해도 나머지 날은 계속 (실패한 날은 건너뛴다)
+      const t = await getJSON(`https://m.stock.naver.com/api/index/${market}/trend?bizdate=${day}`).catch(e => (console.error(market, day, e.message), {}));
       const vals = [num(t.personalValue), num(t.foreignValue), num(t.institutionalValue)];
       if (t.bizdate === day && vals.some(v => v !== 0)) found.push([ymd(day), ...vals]);   // 휴장일(전부 0)은 건너뛰기
       await sleep(200);   // 상대 서버에 부담 주지 않게 잠깐 쉬기
     }
     flows[market] = mergeByDate(flows[market], found);
+    flows.filled[market] ||= now().slice(0, 10);
   }
   flows.updated = now();
   await save('data/flows.json', flows);
@@ -327,7 +337,7 @@ await section('칼시', async () => {
 // 로봇처럼 보이면 거절(418)하므로 브라우저처럼 머리말을 붙인다
 await section('공포탐욕', async () => {
   const j = await getJSON('https://production.dataviz.cnn.io/index/fearandgreed/graphdata', { headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36',
+    'User-Agent': BROWSER,
     'Accept': 'application/json, text/plain, */*', 'Referer': 'https://edition.cnn.com/', 'Origin': 'https://edition.cnn.com',
   } });
   const f = j.fear_and_greed, r1 = v => Math.round(v * 10) / 10;
@@ -408,7 +418,105 @@ if (await stale('data/bls.json', 360)) await section('BLS', async () => {
   return Object.keys(BLS).map(k => `${k} ${bls[k].at(-1)?.join('=')}`).join(' ');
 });
 
-// ── 11. 카드 아래 뉴스: Google 뉴스 검색 RSS(최근 2일)에서 제목만 ── 1시간에 한 번 (검색어가 30개쯤이라서)
+// ── 11. 나스닥100 P/E: 월스트리트저널(WSJ) 'P/E & Yields on Major Indexes' 표 (🟠 비공식) ── 6시간에 한 번
+// 숫자는 Birinyi Associates가 매주 금요일 갱신. 웹페이지 안에 표 자료(JSON)가 들어 있어서 그 부분만 읽는다
+// 예: ..."tradeDate":"2026-10-30T00:00:00","instruments":[{..."name":"NASDAQ 100 Index","priceEarningsRatio":"29.92",...}]
+// 과거 기록은 주지 않으므로 받을 때마다 data/ndx.json의 history에 [날짜, P/E]로 쌓는다
+if (await stale('data/ndx.json', 360)) await section('나스닥100 P/E', async () => {
+  const page = (await getText('https://www.wsj.com/market-data/stocks/peyields', { headers: { 'User-Agent': BROWSER } })).replace(/\\"/g, '"');
+  const at = page.indexOf('"name":"NASDAQ 100 Index"');
+  if (at < 0) throw new Error('표에서 NASDAQ 100 Index 줄을 못 찾음');
+  const row = JSON.parse(page.slice(page.lastIndexOf('{', at), page.indexOf('}', at) + 1));
+  const date = page.slice(page.lastIndexOf('"tradeDate":"', at)).match(/"tradeDate":"(\d{4}-\d{2}-\d{2})/)[1];
+  const old = await load('data/ndx.json', {});
+  const pe = Number(row.priceEarningsRatio);
+  await save('data/ndx.json', {
+    updated: now(), date, pe, pe52: Number(row.priceEarningsRatio52WeekAgo), fwd: Number(row.priceEarningsRatioEstimate),
+    history: mergeByDate(old.history, [[date, pe]]),
+  });
+  return `${pe} (${date})`;
+});
+
+// ── 12. 투자 거물 포트폴리오 ── 12시간에 한 번 (13F는 분기마다, ARK는 하루 한 번 바뀐다)
+// 기관 = ✅ 미국 증권거래위원회(SEC) 13F 공식 신고: 분기말 45일 안에 공개, 미국 상장 주식·옵션의 롱 포지션만
+// 캐시 우드 = ✅ ARK가 매일 공개하는 ARKK 보유 종목 파일
+// SEC는 요청에 연락처를 밝히라고 요구한다 (안 밝히면 403으로 거절)
+const SEC = { headers: { 'User-Agent': 'mammoth1230-market-dashboard mammoth1230@gmail.com' } };
+const GURUS = [   // [열쇠, 이름, 소개, SEC 회사 번호(CIK)]
+  ['buffett', '워런 버핏', '버크셔 해서웨이 회장', 1067983],
+  ['ackman', '빌 애크먼', '퍼싱 스퀘어 CEO', 1336528],
+  ['burry', '마이클 버리', "사이언 · '빅쇼트'", 1649339],
+  ['druckenmiller', '스탠리 드러켄밀러', '듀케인 패밀리오피스', 1536411],
+  ['dalio', '레이 달리오', '브리지워터 창업자', 1350694],
+  ['tepper', '데이비드 테퍼', '아팔루사 창업자', 1656456],
+];
+const ARK = ['wood', '캐시 우드', 'ARK 인베스트 CEO · ARKK'];
+const tidy = s => s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());   // 'APPLE INC' → 'Apple Inc'
+
+// 13F 보유 종목표(XML) → 회사별 금액 합계, 큰 순. 같은 회사도 운용 담당·주식 종류(알파벳 A·C주)별로 여러 줄이라
+// 회사 이름으로 합친다 (풋·콜 옵션은 주식과 따로)
+function parse13F(xml) {
+  const byKey = {};
+  for (const [, row] of xml.matchAll(/<(?:\w+:)?infoTable>([\s\S]*?)<\/(?:\w+:)?infoTable>/g)) {
+    const tag = t => row.match(new RegExp(`<(?:\\w+:)?${t}>([^<]*)<`))?.[1].trim() || '';
+    const name = tidy(tag('nameOfIssuer')), put = tag('putCall');   // put: '' = 주식, 'Put' / 'Call' = 옵션
+    (byKey[name + put] ||= { name, put, value: 0 }).value += Number(tag('value'));
+  }
+  return Object.values(byKey).sort((a, b) => b.value - a.value);
+}
+// 보유 목록 → 화면용 요약: 종목 수, 위 15개의 비중(%)
+function topHoldings(list) {
+  const total = list.reduce((s, h) => s + h.value, 0);
+  return { count: list.length, top: list.slice(0, 15).map(h => [h.name, Math.round(h.value / total * 1000) / 10, h.put]) };
+}
+// 큰따옴표 안의 쉼표는 나누지 않는 CSV 한 줄 나누기: 'a,"1,234",b' → ['a', '1,234', 'b']
+function csvRow(line) {
+  const out = [''];
+  let quoted = false;
+  for (const ch of line) {
+    if (ch === '"') quoted = !quoted;
+    else if (ch === ',' && !quoted) out.push('');
+    else out[out.length - 1] += ch;
+  }
+  return out;
+}
+
+if (await stale('data/portfolios.json', 720)) await section('포트폴리오', async () => {
+  const old = Object.fromEntries(((await load('data/portfolios.json', {})).investors || []).map(p => [p.key, p]));
+  const investors = [];
+  for (const [key, name, role, cik] of GURUS) {
+    try {
+      const f = (await getJSON(`https://data.sec.gov/submissions/CIK${String(cik).padStart(10, '0')}.json`, SEC)).filings.recent;
+      const i = f.form.indexOf('13F-HR');   // 가장 최근 정기 신고 (정정 신고 13F-HR/A는 빼기)
+      const dir = `https://www.sec.gov/Archives/edgar/data/${cik}/${f.accessionNumber[i].replaceAll('-', '')}`;
+      await sleep(200);
+      const file = (await getJSON(dir + '/index.json', SEC)).directory.item.map(x => x.name)
+        .find(n => n.endsWith('.xml') && n !== 'primary_doc.xml');   // 보유 종목표 = 표지(primary_doc) 말고 다른 XML
+      await sleep(200);
+      investors.push({ key, name, role, src: '✅ SEC 13F 공식 신고', filed: f.filingDate[i], asOf: f.reportDate[i], url: dir,
+                       ...topHoldings(parse13F(await getText(`${dir}/${file}`, SEC))) });
+    } catch (e) {
+      console.error(`포트폴리오 ${name} 실패:`, e.message);
+      if (old[key]) investors.push(old[key]);   // 실패하면 지난번 값 유지
+    }
+    await sleep(300);
+  }
+  try {
+    // 한 줄 = date,fund,company,ticker,cusip,shares,"market value ($)","weight (%)" (맨 아래 안내 문구 줄은 빼기)
+    const rows = (await getText('https://assets.ark-funds.com/fund-documents/funds-etf-csv/ARK_INNOVATION_ETF_ARKK_HOLDINGS.csv'))
+      .trim().split('\n').slice(1).map(l => csvRow(l.trim())).filter(c => c[1] === 'ARKK' && c[2]);
+    const list = rows.map(c => ({ name: tidy(c[2]), put: '', value: Number(c[6].replace(/[$,]/g, '')) })).sort((a, b) => b.value - a.value);
+    investors.push({ key: ARK[0], name: ARK[1], role: ARK[2], src: '✅ ARK 매일 공개 보유 종목', asOf: mdy(rows[0][0]),
+                     url: 'https://www.ark-funds.com/funds/arkk', ...topHoldings(list) });
+  } catch (e) {
+    console.error('포트폴리오 ARK 실패:', e.message);
+    if (old[ARK[0]]) investors.push(old[ARK[0]]);
+  }
+  await save('data/portfolios.json', { updated: now(), investors });
+  return investors.map(p => `${p.key} ${p.top[0]?.join(' ')}`).join(' / ');
+});
+
+// ── 13. 카드 아래 뉴스: Google 뉴스 검색 RSS(최근 2일)에서 제목만 ── 1시간에 한 번 (검색어가 30개쯤이라서)
 // RSS = 사이트가 새 글 목록을 기계가 읽기 좋게 내놓는 XML 형식. [꼬리표, 검색어, 개수(기본 1)]
 const NEWS = {
   sp500: [['현황', 'S&P500 뉴욕증시 마감'], ['전망', 'S&P500 전망']],
@@ -427,6 +535,7 @@ const NEWS = {
   fng: [['전망', '뉴욕증시 투자심리']],
 };
 for (const s of watch) NEWS['s_' + s.code] = [['', s.name + ' 주가', 3]];   // 관심 종목은 3개씩 (열쇠 = 's_' + 코드)
+for (const [key, name] of [...GURUS, ARK]) NEWS['p_' + key] = [['', name, 2]];   // 포트폴리오 탭 (열쇠 = 'p_' + 이름)
 
 const unescape = s => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
 async function getNews(query, n) {
