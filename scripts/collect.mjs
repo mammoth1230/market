@@ -12,7 +12,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 
 // ── 공통 도구 ──
 const UA = { 'User-Agent': 'Mozilla/5.0' };
-// 로봇을 거절하는 사이트(CNN·WSJ)에는 브라우저처럼 보이는 머리말을 쓴다
+// CNN은 이 머리말이 없으면 거절(418)한다
 const BROWSER = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const now = () => new Date().toISOString();
@@ -253,7 +253,31 @@ await section('수급', async () => {
 
 // ── 5. 주요국 기준금리: 국제결제은행(BIS) 정책금리 통계 (키 없이 CSV로 공개) ── 3시간에 한 번
 // 나라 코드: KR 한국, US 미국, XM 유로존, JP 일본, AU 호주, GB 영국, CA 캐나다, CN 중국
+// BIS는 1~3주 늦게 반영되므로, 중앙은행이 직접 공개하는 일별 금리(✅ 키 없음)로 BIS 마지막 날 뒤를 채운다.
+// 그래도 비는 나라(한국·일본·호주·중국)는 data/rates-manual.json에 손으로 적는다
 const BANKS = ['KR', 'US', 'XM', 'JP', 'AU', 'GB', 'CA', 'CN'];
+const recent = () => new Date(Date.now() - 60 * 864e5);   // 공식 일별 금리는 최근 60일치만 받는다
+// [나라]: [출처 표시, 최근 60일 [[날짜, 금리]]를 받는 함수]
+const OFFICIAL = {
+  // 미국: 뉴욕 연준이 매일 내는 실효 연방기금금리 자료에 목표 범위가 붙어 있다. BIS처럼 범위의 가운데 값으로 (3.75~4.00% → 3.875)
+  US: ['✅ 뉴욕 연준 공식 (목표 범위)', async () =>
+    (await getJSON(`https://markets.newyorkfed.org/api/rates/unsecured/effr/search.json?startDate=${recent().toISOString().slice(0, 10)}&endDate=${now().slice(0, 10)}`))
+      .refRates.map(r => [r.effectiveDate, (r.targetRateFrom + r.targetRateTo) / 2])],
+  // 유로존: 유럽중앙은행 예금금리(DFR) — BIS의 유로존 값도 이 금리
+  XM: ['✅ 유럽중앙은행 공식 (예금금리)', async () =>
+    (await getText(`https://data-api.ecb.europa.eu/service/data/FM/D.U2.EUR.4F.KR.DFR.LEV?startPeriod=${recent().toISOString().slice(0, 10)}&format=csvdata&detail=dataonly`))
+      .trim().split('\n').slice(1).map(l => l.split(',')).map(c => [c[8], Number(c[9])])],
+  // 캐나다: 캐나다은행 공식 API(Valet)의 기준금리 V39079
+  CA: ['✅ 캐나다은행 공식', async () =>
+    (await getJSON(`https://www.bankofcanada.ca/valet/observations/V39079/json?start_date=${recent().toISOString().slice(0, 10)}`))
+      .observations.map(o => [o.d, Number(o.V39079.v)])],
+  // 영국: 영란은행 통계 데이터베이스의 Bank Rate(IUDBEDR). 한 줄 예: '03 Nov 2026,3.75', 날짜 넣는 칸은 '06/Sep/2026' 모양
+  GB: ['✅ 영란은행 공식', async () => {
+    const from = recent().toUTCString().slice(5, 16).replaceAll(' ', '/');   // 'Sun, 06 Sep 2026 ...' → '06/Sep/2026'
+    return (await getText(`https://www.bankofengland.co.uk/boeapps/database/_iadb-fromshowcolumns.asp?csv.x=yes&Datefrom=${from}&Dateto=now&SeriesCodes=IUDBEDR&CSVF=TN&UsingCodes=Y&VPD=Y&VFD=N`))
+      .trim().split('\n').slice(1).map(l => l.trim().split(',')).map(([d, v]) => [new Date(d + ' UTC').toISOString().slice(0, 10), Number(v)]);
+  }],
+};
 if (await stale('data/rates.json', 180)) await section('기준금리', async () => {
   const bis = async (freq, start) =>   // 한 줄 = FREQ,나라,날짜,값
     (await getText(`https://stats.bis.org/api/v1/data/WS_CBPOL/${freq}.${BANKS.join('+')}?startPeriod=${start}&format=csv&detail=dataonly`))
@@ -267,12 +291,25 @@ if (await stale('data/rates.json', 180)) await section('기준금리', async () 
     const m = monthly.filter(r => r[0] === b).map(r => [r[1], r[2]]);
     // 금리가 바뀐 날만 남기기 → 일정표의 '결과: 인상 3.50→3.75%'에 쓴다
     const changes = d.filter((r, i) => i === 0 || r[2] !== d[i - 1][2]).map(r => [r[1], r[2]]);
-    rates[b] = { rate: last ? last[2] : m.at(-1)?.[1], asOf: last ? last[1] : m.at(-1)?.[0], src: 'BIS', changes, monthly: m };
+    // how = 값이 어디서 왔나: 'bis' / 'official'(중앙은행 공식 일별 자료) / 'manual'(rates-manual.json)
+    rates[b] = { rate: last ? last[2] : m.at(-1)?.[1], asOf: last ? last[1] : m.at(-1)?.[0], src: 'BIS', how: 'bis', changes, monthly: m };
   }
-  // BIS에 아직 안 들어간 최근 결정은 data/rates-manual.json에 적어 두면 덮어쓴다
+  // BIS 마지막 날 뒤의 공식 일별 금리로 채우기: 금리가 바뀐 날은 changes에도 더한다
+  for (const [b, [src, get]] of Object.entries(OFFICIAL)) {
+    try {
+      const r = rates[b];
+      const newer = (await get()).filter(([d, v]) => d > (r.asOf || '') && !isNaN(v)).sort(([a], [c]) => a.localeCompare(c));
+      for (const [d, v] of newer) if (v !== (r.changes.at(-1)?.[1] ?? r.rate)) r.changes.push([d, v]);
+      if (newer.length) Object.assign(r, { rate: newer.at(-1)[1], asOf: newer.at(-1)[0], src, how: 'official' });
+    } catch (e) {
+      console.error(`공식 금리 ${b} 실패 (BIS 값 유지):`, e.message);
+    }
+    await sleep(200);
+  }
+  // 그래도 BIS·공식 자료에 아직 없는 최근 결정은 data/rates-manual.json에 적어 두면 덮어쓴다 (날짜가 더 늦을 때만)
   for (const [b, o] of Object.entries((await load('data/rates-manual.json', {})).override || {})) {
     if (rates[b] && o.since > (rates[b].asOf || '')) {
-      Object.assign(rates[b], { rate: o.rate, asOf: o.since, src: o.src });
+      Object.assign(rates[b], { rate: o.rate, asOf: o.since, src: o.src, how: 'manual' });
       rates[b].changes.push([o.since, o.rate]);
     }
   }
@@ -423,7 +460,7 @@ if (await stale('data/bls.json', 360)) await section('BLS', async () => {
 // 예: ..."tradeDate":"2026-10-30T00:00:00","instruments":[{..."name":"NASDAQ 100 Index","priceEarningsRatio":"29.92",...}]
 // 과거 기록은 주지 않으므로 받을 때마다 data/ndx.json의 history에 [날짜, P/E]로 쌓는다
 if (await stale('data/ndx.json', 360)) await section('나스닥100 P/E', async () => {
-  const page = (await getText('https://www.wsj.com/market-data/stocks/peyields', { headers: { 'User-Agent': BROWSER } })).replace(/\\"/g, '"');
+  const page = (await getText('https://www.wsj.com/market-data/stocks/peyields')).replace(/\\"/g, '"');
   const at = page.indexOf('"name":"NASDAQ 100 Index"');
   if (at < 0) throw new Error('표에서 NASDAQ 100 Index 줄을 못 찾음');
   const row = JSON.parse(page.slice(page.lastIndexOf('{', at), page.indexOf('}', at) + 1));
