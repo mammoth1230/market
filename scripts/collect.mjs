@@ -451,7 +451,9 @@ const GURUS = [   // [열쇠, 이름, 소개, SEC 회사 번호(CIK)]
   ['tepper', '데이비드 테퍼', '아팔루사 창업자', 1656456],
 ];
 const ARK = ['wood', '캐시 우드', 'ARK 인베스트 CEO · ARKK'];
-const tidy = s => s.toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());   // 'APPLE INC' → 'Apple Inc'
+// 'APPLE INC' → 'Apple Inc'. XML 안의 특수문자 표기(&amp; 등)는 먼저 원래 글자로 ('S&amp;P' → 'S&P')
+const tidy = s => s.replace(/&amp;/g, '&').replace(/&apos;|&#39;/g, "'").replace(/&quot;/g, '"')
+  .toLowerCase().replace(/(^|[\s\-./&(])([a-z])/g, (m, before, c) => before + c.toUpperCase());   // 단어 첫 글자만 (Moody's의 s는 그대로)
 
 // 13F 보유 종목표(XML) → 회사별 금액 합계, 큰 순. 같은 회사도 운용 담당·주식 종류(알파벳 A·C주)별로 여러 줄이라
 // 회사 이름으로 합친다 (풋·콜 옵션은 주식과 따로)
