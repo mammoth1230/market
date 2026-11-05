@@ -215,7 +215,32 @@
   </div>
 
   <script>
+    // ── 설정 ──
+    const REPO = 'mammoth1230/market';            // 이 사이트의 GitHub 저장소 (일정표 마지막 수정일 조회용)
+    const TABS = ['market', 'calendar', 'watch'];  // 맨 위 탭 = 주소 끝 #market / #calendar / #watch
+    // ⚙ 이 사이트가 정한 규칙 (공식 기준 아님). 숫자는 여기서만 바꾸면 요약 문장과 설명 글이 함께 바뀐다
+    const RULE = {
+      big: 1.5,     // 두 지수 평균 ±1.5% 이상 = '크게'
+      small: 0.3,   // ±0.3% 미만 = '소폭'
+      oil: 3,       // 유가가 ±3% 이상 움직인 날만 요약에 언급
+      fx: 1,        // 원/달러가 ±1% 이상 움직인 날만 요약에 언급
+      ust: 4.6,     // 미국 10년물 경계선
+    };
+
+    // ── 화면이 들고 있는 자료 (data/*.json에서 읽어 온 것) ──
+    let latest = {}, hist = {}, news = {};            // 최신 시세, 날짜별 기록, 뉴스
+    let latestUpdated, kalshiUpdated, stocksUpdated, ratesUpdated;   // 갱신 현황 표에 쓸 수집 시각
+    let watchlist = [], stocks = {};                  // 관심 종목 목록과 기업 정보
+    let rates = {}, kalshi = {}, kalshiYear = {}, fng = null, valuation = null, bls = {};
+    let events = [], guides = {}, flows = {};         // 일정, 읽는 법, 투자자별 순매수
+    // 화면 선택 상태: 공포탐욕 모양, 순매수 시장, 일정 분류, 지난 일정 펼침
+    let fngMode = 'gauge', mkt = 'KOSPI', cat = '전체', showPast = false;
+
     // ── 공통 도구 ──
+    // 그리기 하나가 실패해도 나머지 칸은 계속 그린다 (실패는 개발자 도구 콘솔에 기록)
+    function safe(fn) {
+      try { return fn(); } catch (e) { console.error(fn.name || '그리기', '실패:', e); }
+    }
     // 등락률을 ▲ 빨강 / ▼ 파랑으로
     function change(pct) {
       const cls = pct >= 0 ? 'up' : 'down';
@@ -253,7 +278,7 @@
       });
     }
 
-    // ── 1. 지수·유가·코인 카드: data/latest.json(최신값) + history.json(기록) + news.json(뉴스) ──
+    // ── 지수·유가·코인 카드: data/latest.json(최신값) + history.json(기록) + news.json(뉴스) ──
     // 묶음마다 [제목, 카드 목록]. 카드 = [Yahoo 코드, 뉴스 열쇠, 가격 모양]
     const GROUPS = [
       ['us', '미국 지수 · S&P500 · 나스닥', [['^GSPC', 'sp500', 'num'], ['^IXIC', 'nasdaq', 'num']]],
@@ -263,9 +288,6 @@
       ['krw', null, [['KRW=X', 'krw', 'won']]],   // 원/달러는 아래 따로 둔 칸에
     ];
     const range = { us: 30, kr: 30, oil: 30, coin: 30, krw: 250, watch: 30 }; // 묶음별 그래프 기간(거래일)
-    let watchlist = [], stocks = {};   // 관심 종목 목록(data/watchlist.json)과 기업 정보(data/stocks.json)
-    let latestUpdated, kalshiUpdated, stocksUpdated, ratesUpdated;   // 갱신 현황 표에 쓸 수집 시각
-    let latest = {}, hist = {}, news = {};
 
     const FMT = {
       num: v => v.toLocaleString('ko-KR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
@@ -378,7 +400,7 @@
         bigCard(cards[n][0], cards[n][1], cards[n][2], `${s.name} <span class="when">${s.code.replace(/\..*/, '')} · ${s.market}</span>`, stockInfoHtml(s))).join('');
     }
 
-    // ── 2. 코인 실시간 가격: 업비트 공식 API (브라우저가 직접, 1분마다) ──
+    // ── 코인 실시간 가격: 업비트 공식 API (브라우저가 직접, 1분마다) ──
     async function loadCoins() {
       if (document.hidden || !document.getElementById('p-btc')) return;   // 브라우저 탭이 숨어 있으면 쉬기
       try {
@@ -397,7 +419,7 @@
       }
     }
 
-    // ── 3. 주요 통화 상대강도: 1년 전 대비 각 통화가 달러에 비해 얼마나 강해졌나 ──
+    // ── 주요 통화 상대강도: 1년 전 대비 각 통화가 달러에 비해 얼마나 강해졌나 ──
     function renderStrength() {
       const CUR = [['KRW=X', '원화', '#f0b429', 3], ['JPY=X', '엔', '#ff7a90', 1.5], ['EUR=X', '유로', '#6db3ff', 1.5],
                    ['GBP=X', '파운드', '#4dd4ac', 1.5], ['CNY=X', '위안', '#b48cff', 1.5]];
@@ -420,7 +442,7 @@
         { legend: true, y: { ticks: { callback: v => v + '%' }, grid: { color: c => c.tick.value === 0 ? '#555' : '#222' } } });
     }
 
-    // ── 4. 엔캐리 청산 경보: 값이 정해 둔 선을 넘으면 '주의'·'발동' ──
+    // ── 엔캐리 청산 경보: 값이 정해 둔 선을 넘으면 '주의'·'발동' ──
     const CARRY = [
       { sym: 'JPY=X', name: 'USD/JPY (달러/엔)', desc: '엔화 강세 = 캐리 청산 신호 · 143 이하 주의 (2024 저점 141.7)', fmt: v => v.toFixed(1),
         level: v => v <= 141.7 ? 2 : v <= 143 ? 1 : 0, carry: true },
@@ -428,8 +450,8 @@
         level: v => v >= 30 ? 2 : v >= 25 ? 1 : 0, carry: true },
       { sym: 'JGB10', name: '일본 국채 10년물', desc: '2.8% 돌파 주의 / 3%대 = 미국채 매도 가속', fmt: v => v.toFixed(2) + '%',
         level: v => v >= 3 ? 2 : v >= 2.8 ? 1 : 0, carry: true },
-      { sym: '^TNX', name: '미국 국채 10년물', desc: '4.6% 돌파 = 금리 상승추세 → 나스닥·성장주 매수 경계', fmt: v => v.toFixed(2) + '%',
-        level: v => v >= 4.6 ? 2 : 0 },
+      { sym: '^TNX', name: '미국 국채 10년물', desc: `${RULE.ust}% 돌파 = 금리 상승추세 → 나스닥·성장주 매수 경계`, fmt: v => v.toFixed(2) + '%',
+        level: v => v >= RULE.ust ? 2 : 0 },
     ];
     const BADGE = [['정상', 'b-ok'], ['주의', 'b-warn'], ['⚠ 발동', 'b-hit']];
 
@@ -452,7 +474,7 @@
       }).join('') + `<div class="carry"><div class="${hits >= 2 ? 'up' : ''}">${hits >= 2 ? '⚠ 엔캐리 청산 경계' : '● 엔캐리 3종 평온'} — 발동 ${hits}개 (미국 10년물은 별도 신호)</div></div>`;
     }
 
-    // ── 5. '지금 시장은' 요약: AI가 아니라 정해 둔 규칙으로 문장을 엮는다 ──
+    // ── '지금 시장은' 요약: AI가 아니라 정해 둔 규칙으로 문장을 엮는다 ──
     const WD = new Intl.DateTimeFormat('ko-KR', { timeZone: 'America/New_York', weekday: 'short' });
     const KWD = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', weekday: 'short' });
     const KDAY = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }); // '2026-11-02'
@@ -461,11 +483,11 @@
     function move(a, b) {
       if ((a >= 0) !== (b >= 0)) return 'mix';
       const m = Math.abs(a + b) / 2;
-      return (m >= 1.5 ? '크게 ' : m < 0.3 ? '소폭 ' : '') + (a >= 0 ? 'up' : 'down');
+      return (m >= RULE.big ? '크게 ' : m < RULE.small ? '소폭 ' : '') + (a >= 0 ? 'up' : 'down');
     }
     function renderSummary() {
       const g = latest['^GSPC'], n = latest['^IXIC'], k = latest['^KS11'], q = latest['^KQ11'];
-      if (!g || !k) return;
+      if (!g || !n || !k || !q) return;   // 네 지수 중 하나라도 없으면 문장을 만들지 않는다
       const s = [];
 
       // 미국: 장중이면 '지금', 하루 안에 끝났으면 '어젯밤', 그보다 오래면 '지난 ○요일 밤'
@@ -488,21 +510,21 @@
       // 미국 투자심리
       if (fng) s.push(`미국 투자심리(CNN 공포탐욕)는 ${Math.round(fng.score)}로 '${FNG_KO[fng.rating] || fngWord(fng.score)}' 단계입니다.`);
 
-      // 환율이 1% 이상 움직였으면 한 줄 (원/달러가 오르면 = 원화 약세)
+      // 환율이 크게 움직였으면 한 줄 (원/달러가 오르면 = 원화 약세)
       const fx = latest['KRW=X'];
-      if (fx && Math.abs(fx.changePct) >= 1)
+      if (fx && Math.abs(fx.changePct) >= RULE.fx)
         s.push(`원/달러 환율은 ${Math.round(fx.price).toLocaleString('ko-KR')}원으로 ${Math.abs(fx.changePct).toFixed(2)}% ${fx.changePct > 0 ? '올랐습니다(원화 약세)' : '내렸습니다(원화 강세)'}.`);
 
-      // 유가가 3% 이상 크게 움직였으면 한 줄
+      // 유가가 크게 움직였으면 한 줄
       const w = latest['CL=F'];
-      if (w && Math.abs(w.changePct) >= 3)
+      if (w && Math.abs(w.changePct) >= RULE.oil)
         s.push(`국제유가(WTI)는 $${w.price.toFixed(2)}로 ${Math.abs(w.changePct).toFixed(1)}% ${w.changePct > 0 ? '급등' : '급락'}했습니다.`);
 
       // 금리·엔캐리 경보
       const t = latest['^TNX'], lv = carryLevels();
       const hits = CARRY.filter((c, i) => c.carry && lv[i] === 2).length;
       if (hits >= 2) s.push(`엔캐리 청산 신호가 ${hits}개 동시에 켜져 있어 경계가 필요합니다.`);
-      if (t && t.price >= 4.6) s.push(`미국 10년물 국채금리는 ${t.price.toFixed(2)}%로 경계선(4.6%) 위에 있습니다.`);
+      if (t && t.price >= RULE.ust) s.push(`미국 10년물 국채금리는 ${t.price.toFixed(2)}%로 경계선(${RULE.ust}%) 위에 있습니다.`);
 
       // 다음 큰 일정
       const next = nextBig();
@@ -512,8 +534,9 @@
         s.push(`다음 큰 일정은 ${mo}/${dd}(${KWD.format(d)}) ${next.title}입니다.`);
       }
       document.getElementById('summary').innerHTML =
-        `<div class="name">📊 지금 시장은 · ${stamp(new Date().toISOString())} 기준</div><div style="margin-top: 6px">${s.join(' ')}</div>
-         <div class="srcline">⚙ AI가 아니라 이 사이트가 정한 규칙으로 만든 문장이에요: 두 지수 평균 ±1.5% 이상이면 '크게', ±0.3% 미만이면 '소폭', 유가는 ±3%·환율은 ±1% 이상 움직인 날만 언급 · 숫자는 아래 각 칸의 출처와 같아요</div>`;
+        // '기준' 시각 = 화면을 연 시각이 아니라 자료를 마지막으로 수집한 시각 (수집은 1시간마다)
+        `<div class="name">📊 지금 시장은 · ${stamp(latestUpdated)} 수집 자료 기준</div><div style="margin-top: 6px">${s.join(' ')}</div>
+         <div class="srcline">⚙ AI가 아니라 이 사이트가 정한 규칙으로 만든 문장이에요: 두 지수 평균 ±${RULE.big}% 이상이면 '크게', ±${RULE.small}% 미만이면 '소폭', 유가는 ±${RULE.oil}%·환율은 ±${RULE.fx}% 이상 움직인 날만 언급 · 숫자는 아래 각 칸의 출처와 같아요</div>`;
     }
 
     async function loadMarket() {
@@ -526,15 +549,9 @@
         latestUpdated = l.updated; kalshiUpdated = ks.updated; stocksUpdated = st.updated; ratesUpdated = rt.updated;
         rates = rt.rates || {}; kalshi = ks.kalshi || {}; kalshiYear = ks.year || {};
         fng = fg.score != null ? fg : null; valuation = va.pe ? { ...va, forward: vm.forwardPE } : null;
-        renderGroups();
-        renderFedBox();
-        renderRates();
-        renderFng();
-        renderStrength();
-        renderCarry();
-        renderSummary();
-        renderNews();
-        renderStatus();
+        // 칸마다 따로 그리기: 한 칸이 실패해도(예: 지수 하나가 빠짐) 나머지 칸은 그대로 보인다
+        [renderGroups, renderFedBox, renderRates, renderFng, renderStrength, renderCarry, renderSummary, renderNews].forEach(safe);
+        renderStatus().catch(e => console.error('갱신 현황 실패:', e));
         document.getElementById('news-note').textContent = nw.updated
           ? `카드 아래 뉴스 = ✅ Google 뉴스 공개 RSS 헤드라인(최근 2일, 자동 수집 ${stamp(nw.updated)}) · 마지막 수집 ${stamp(l.updated)}` : '';
       } catch (e) {
@@ -543,14 +560,13 @@
       }
     }
 
-    // ── 10. 주요국 기준금리 + 칼시 확률: data/rates.json, data/kalshi.json ──
+    // ── 주요국 기준금리 + 칼시 확률: data/rates.json, data/kalshi.json ──
     // [BIS 나라 코드, 나라, 중앙은행, 일정표(events.json)의 kind]
     const BANKS = [['KR', '한국', '한국은행 BOK', 'BOK'], ['US', '미국', '연준 Fed', 'FOMC'], ['XM', '유럽', '유럽중앙은행 ECB', 'ECB'],
                    ['JP', '일본', '일본은행 BOJ', 'BOJ'], ['AU', '호주', '호주중앙은행 RBA'], ['GB', '영국', '영란은행 BOE'],
                    ['CA', '캐나다', '캐나다은행 BOC'], ['CN', '중국', '인민은행 LPR 1년']];
     const BCOLOR = { KR: '#f0b429', US: '#ff5a5a', XM: '#6db3ff', JP: '#ff7a90', AU: '#4dd4ac', GB: '#b48cff', CA: '#ffa04d', CN: '#9aa3b2' };
     const MD = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' });
-    let rates = {}, kalshi = {}, kalshiYear = {}, fng = null, valuation = null, fngMode = 'gauge';
 
     function md(at) { return MD.format(new Date(at)).replace(/\. ?/g, '/').replace(/\/$/, ''); }   // '12/10'
     // 미국은 '3.75~4.00%'처럼 범위로 정하므로 BIS의 가운데 값(3.875)을 범위로 되돌리기
@@ -621,7 +637,7 @@
         { legend: true, y: { ticks: { callback: v => v + '%' } } });
     }
 
-    // ── 11. CNN 공포·탐욕: 게이지 / 1년 추이 ──
+    // ── CNN 공포·탐욕: 게이지 / 1년 추이 ──
     const FNG_KO = { 'extreme fear': '극단적 공포', fear: '공포', neutral: '중립', greed: '탐욕', 'extreme greed': '극단적 탐욕' };
     function fngWord(v) { return v < 25 ? '극단적 공포' : v < 45 ? '공포' : v <= 55 ? '중립' : v <= 75 ? '탐욕' : '극단적 탐욕'; }
     function renderFng() {
@@ -645,11 +661,22 @@
           `<div>${n}<b>${Math.round(v)}</b>${fngWord(v)}</div>`).join('')}</div>`;
     }
 
-    // ── 12. 자료 출처·갱신 현황 표: 자료마다 출처, 자료 기준 날짜, 마지막 수집 시각 ──
+    // ── 자료 출처·갱신 현황 표: 자료마다 출처, 자료 기준 날짜, 마지막 수집 시각 ──
+    // 손으로 고치는 일정표(data/events.json)를 마지막으로 저장한 날: GitHub 공개 API로 확인 (실패하면 –)
+    const eventsEdited = fetch(`https://api.github.com/repos/${REPO}/commits?path=data/events.json&per_page=1`)
+      .then(r => r.ok ? r.json() : []).then(j => j[0]?.commit?.committer?.date).catch(() => null);
+
     async function renderStatus() {
       const [state, credit, flowsData] = await Promise.all(['state', 'credit', 'flows'].map(getJSON));
       const q = s => latest[s] || {};
       const day = d => d || '–';
+      // 기준금리: 나라마다 BIS 반영 날짜가 달라서 가장 이른 날 ~ 가장 늦은 날로 보여 준다.
+      // BIS가 아닌 값(data/rates-manual.json에 직접 반영)은 어느 나라인지 출처 칸에 적는다
+      const asOfs = Object.values(rates).map(r => r.asOf).filter(Boolean).sort();
+      const manual = BANKS.filter(([b]) => rates[b] && rates[b].src !== 'BIS').map(([, country]) => country);
+      const rateSrc = '✅ 국제결제은행(BIS)' + (manual.length ? ` + 중앙은행 공식 발표 직접 반영(${manual.join('·')})` : '');
+      const rateAsOf = asOfs.length ? (asOfs[0] === asOfs.at(-1) ? asOfs[0] : `${asOfs[0]} ~ ${asOfs.at(-1)} (나라마다 다름)`) : '–';
+      const edited = await eventsEdited;
       // [자료, 출처, 자료 기준, 마지막 수집, 수집 주기(분)]
       const rows = [
         ...[['^GSPC', 'S&P500'], ['^IXIC', '나스닥'], ['^KS11', '코스피'], ['^KQ11', '코스닥'], ['CL=F', 'WTI 유가'], ['BZ=F', '브렌트유']]
@@ -659,7 +686,7 @@
         ['미국 국채 10년물', q('^TNX').src, day(q('^TNX').date), state.UST10, 120],
         ['일본 국채 10년물', q('JGB10').src, day(q('JGB10').date), state.JGB10, 120],
         ['비트코인·이더리움', '✅ 업비트 공식 API', '화면에서 1분마다 실시간', null, 0],
-        ['주요국 기준금리', '✅ 국제결제은행(BIS) + 캐나다은행 공식 발표', day(Object.values(rates).map(r => r.asOf).sort().at(-1)), ratesUpdated, 180],
+        ['주요국 기준금리', rateSrc, rateAsOf, ratesUpdated, 180],
         ['칼시 금리 확률', '✅ 칼시 공개 API', '수집 시각 기준', kalshiUpdated, 60],
         ['CNN 공포·탐욕', '🟠 CNN 웹페이지용 주소', fng ? stamp(fng.time) : '–', fng?.updated, 60],
         ['신용융자잔고·예탁금', '🟡 금융투자협회 FreeSIS', day(credit.rows?.at(-1)?.[0]), credit.updated, 180],
@@ -669,7 +696,7 @@
         ['미국 CPI·PPI·고용 발표치', '✅ 미국 노동통계국(BLS) API', day(bls.cpi?.at(-1)?.[0]) + ' 분까지', bls.updated, 360],
         ['관심 종목 기업 정보', '🟠 네이버 증권', '수집 시각 기준', stocksUpdated, 60],
         ['카드 아래 뉴스', '✅ Google 뉴스 공개 RSS', '최근 2일 기사', news.updated, 60],
-        ['주요 일정', '✅ 각 기관 공식 일정표 (손으로 입력)', '2026-11-03 확인', null, 0],
+        ['주요 일정', '✅ 각 기관 공식 일정표 (손으로 입력)', edited ? `마지막 수정 ${KDAY.format(new Date(edited))}` : '–', null, 0],
       ];
       document.getElementById('status').innerHTML = `<table class="status">
         <tr><th>자료</th><th>출처</th><th>자료 기준</th><th>마지막 수집</th></tr>
@@ -722,8 +749,7 @@
       }
     });
 
-    // ── 7. 투자자별 순매수: data/flows.json (시장별 [날짜, 개인, 외국인, 기관]) ──
-    let flows = {}, mkt = 'KOSPI';
+    // ── 투자자별 순매수: data/flows.json (시장별 [날짜, 개인, 외국인, 기관]) ──
     function drawFlows() {
       const rows = flows[mkt] || [];
       const cell = v => `<td class="${v >= 0 ? 'up' : 'down'}">${v >= 0 ? '+' : ''}${v.toLocaleString('ko-KR')}</td>`;
@@ -745,9 +771,7 @@
       }
     }
 
-    // ── 5. 다가오는 일정: data/events.json을 읽어 다음 일정까지 카운트다운 ──
-    let events = [];
-
+    // ── 다가오는 일정: data/events.json을 읽어 다음 일정까지 카운트다운 ──
     // 날짜를 '11. 26. (목) 오전 10:00' 처럼, 해외에서 봐도 항상 한국시간으로
     const KST = new Intl.DateTimeFormat('ko-KR', {
       timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric',
@@ -791,19 +815,18 @@
         guides = g;
         shownNext = null;
         tick();
-        if (rates.KR) renderRates();       // 금리 칸의 '다음 결정' 날짜도 일정표에서 가져오므로
-        if (kalshi.US) renderFedBox();
-        renderSummary();   // 요약 문장의 '다음 큰 일정'과 일정 뉴스도 다시
-        renderNews();
+        if (rates.KR) safe(renderRates);       // 금리 칸의 '다음 결정' 날짜도 일정표에서 가져오므로
+        if (kalshi.US) safe(renderFedBox);
+        safe(renderSummary);   // 요약 문장의 '다음 큰 일정'과 일정 뉴스도 다시
+        safe(renderNews);
       } catch (e) {
         document.getElementById('next').textContent = '일정을 불러오지 못했어요.';
         console.error(e);
       }
     }
 
-    // ── 8. 주요 일정 탭: 분류 버튼 + 달별 묶음 + 읽는 법 + 관련 뉴스 ──
+    // ── 주요 일정 탭: 분류 버튼 + 달별 묶음 + 읽는 법 + 관련 뉴스 ──
     const CATS = ['전체', '중앙은행·금리', '미국 경제지표', '기업 실적', '증시 수급', '상장·정치'];
-    let guides = {}, cat = '전체', showPast = false;
     const KIND_BANK = { FOMC: 'US', BOK: 'KR', ECB: 'XM', BOJ: 'JP' };   // 일정 종류 → 칼시 나라 코드
     const MONTH = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long' });
     const DAYNUM = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', day: 'numeric' });
@@ -819,7 +842,6 @@
     // ── 지난 일정의 '결과' 만들기 ──
     // 중앙은행: BIS 금리가 바뀐 날 목록(rates[나라].changes)에서 회의 전날 금리와 며칠 뒤 금리를 비교
     // 미국 지표: BLS 발표치(bls.json)에서 해당 월(ref) 값으로 전년비 등을 계산
-    let bls = {};
     function rateOn(b, day) {   // day 날짜(포함)까지 마지막으로 정해진 금리
       const c = (rates[b]?.changes || []).filter(x => x[0] <= day);
       return c.length ? c.at(-1)[1] : null;
@@ -892,18 +914,19 @@
         (coming.length ? '' : '<div class="card">이 분류에 남은 일정이 없어요.</div>');
     }
 
-    // ── 9. 맨 위 탭 바꾸기: 주소 끝 #calendar 처럼 기억해서 새로고침해도 그대로 ──
+    // ── 맨 위 탭 바꾸기: 주소 끝 #calendar 처럼 기억해서 새로고침해도 그대로 ──
     function showTab(id) {
-      for (const t of ['market', 'calendar', 'watch'])
+      for (const t of TABS)
         document.getElementById('tab-' + t).hidden = t !== id;
       document.querySelectorAll('#main-tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === id));
       // 이 탭이 숨어 있던 동안 미뤄 둔 그래프 그리기
       for (const [cid, args] of Object.entries(pending)) drawChart(cid, ...args);
     }
-    window.addEventListener('hashchange', () =>
-      showTab(['market', 'calendar', 'watch'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'market'));
+    // 주소 끝(#calendar 등)이 아는 탭이면 그 탭, 아니면 시장 현황
+    const tabFromHash = () => TABS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'market';
+    window.addEventListener('hashchange', () => showTab(tabFromHash()));
 
-    // ── 6. 신용잔고·예탁금: data/credit.json 읽기 (rows = [날짜, 코스피 신용, 코스닥 신용, 예탁금]) ──
+    // ── 신용잔고·예탁금: data/credit.json 읽기 (rows = [날짜, 코스피 신용, 코스닥 신용, 예탁금]) ──
     async function loadCredit() {
       const box = document.getElementById('credit');
       try {
@@ -932,8 +955,9 @@
     }
 
     function loadAll() {
+      // 화면을 불러온 시각 (자료 자체의 시각은 칸마다 '○○ 기준'과 맨 아래 갱신 현황 표에)
       document.getElementById('time').textContent =
-        '업데이트: ' + new Date().toLocaleString('ko-KR');
+        '화면 불러온 시각: ' + new Date().toLocaleString('ko-KR') + ' · 자료는 1시간마다 자동 수집';
       loadEvents();
       loadMarket();
       loadCredit();
@@ -941,7 +965,7 @@
     }
 
     loadAll();
-    showTab(['market', 'calendar', 'watch'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'market');
+    showTab(tabFromHash());
     setInterval(loadCoins, 60 * 1000); // 코인은 1분마다 자동 갱신
     setInterval(tick, 1000);           // 카운트다운은 1초마다
   </script>
