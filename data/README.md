@@ -17,7 +17,7 @@ Claude 프로젝트에 이 저장소를 연결해 두면, 아래 설명대로 �
 |---|---|---|
 | `latest.json` | 최신 시세 | `quotes[]` = `{ name, symbol, price, date, changePct(전일대비 %), time, high52, low52, open(장중 여부), src }` |
 | `history.json` | 날짜별 종가 (끝난 날만, 최근 400개) | `{ 심볼: [[날짜, 종가], ...] }` 오래된 순. 심볼: `^GSPC` S&P500, `^IXIC` 나스닥, `^KS11` 코스피, `^KQ11` 코스닥, `CL=F` WTI, `BZ=F` 브렌트, `KRW=X` 원/달러, `JPY=X` 달러/엔, `EUR=X` 달러/유로(1달러=몇 유로), `GBP=X`, `CNY=X`, `^VIX`, `^TNX` 미국 10년물(%), `JGB10` 일본 10년물(%), `BTC-KRW`, `ETH-KRW`, 관심 종목 코드 |
-| `rates.json` | 주요국 기준금리 (✅ BIS + 직접 반영) | `rates.나라 = { rate, asOf, src, changes[[적용일, 금리]], monthly[[월, 금리]] }`. 나라: KR US XM(유로존) JP AU GB CA CN. 미국 `rate`는 목표 범위의 가운데 값(3.875 = 3.75~4.00%) |
+| `rates.json` | 주요국 기준금리 (✅ BIS + 중앙은행 공식 일별 자료 + 직접 반영) | `rates.나라 = { rate, asOf, src, how('bis'/'official'/'manual' = 값이 온 곳), changes[[적용일, 금리]], monthly[[월, 금리]] }`. 나라: KR US XM(유로존) JP AU GB CA CN. 미국 `rate`는 목표 범위의 가운데 값(3.875 = 3.75~4.00%) |
 | `rates-manual.json` | BIS에 아직 안 들어간 최근 금리 결정 (손으로 입력) | `override.나라 = { rate, since(적용일), src }` |
 | `kalshi.json` | 칼시 예측시장 금리 결정 확률 | `kalshi.나라.meetings[] = { close(마감), label(1순위), prob(%), thin(거래 적음), options[] }`, `year.hikes/cuts` = 올해 남은 인상·인하 확률 |
 | `bls.json` | 미국 노동통계국 발표치 (✅) | `cpi`·`core`(근원 CPI 지수), `ppi`(최종수요), `payrolls`(비농업 고용, 천 명), `unemp`(실업률 %) = `[[YYYY-MM, 값]]` |
